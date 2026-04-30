@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReplyIQ — HR Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 400: '#6b93ff', 500: '#4f72e6', 600: '#3356d6', 700: '#2540b8' },
+            dark: '#0a0f1c',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0a0f1c; }
+    .chat-scroll::-webkit-scrollbar { width: 6px; }
+    .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .typing-indicator span {
+      animation: bounce 1.4s infinite ease-in-out;
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: #6b93ff;
+      border-radius: 50%;
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+    }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .kb-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      background: rgba(79, 114, 230, 0.2);
+      border: 1px solid rgba(79, 114, 230, 0.3);
+      border-radius: 4px;
+      color: #6b93ff;
+    }
+    .doc-chip {
+      background: rgba(79, 114, 230, 0.1);
+      border: 1px solid rgba(79, 114, 230, 0.2);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: #6b93ff;
+    }
+  </style>
+</head>
+<body class="text-white min-h-screen flex flex-col">
+
+  <!-- Top bar -->
+  <header class="border-b border-slate-800 px-4 py-3 flex items-center justify-between bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center text-xs font-bold">R</div>
+      <span class="font-bold text-sm">ReplyIQ</span>
+      <span class="text-slate-500 text-xs ml-1">HR Assistant</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <div id="kb-status" class="flex items-center gap-1.5 text-xs text-slate-400">
+        <div class="w-2 h-2 rounded-full bg-slate-600" id="kb-dot"></div>
+        <span id="kb-count">0 docs</span>
+      </div>
+      <button onclick="showSetup()" class="text-xs text-brand-400 hover:text-brand-300 font-medium">Manage KB</button>
+    </div>
+  </header>
+
+  <!-- Main chat area -->
+  <main class="flex-1 flex flex-col max-w-3xl w-full mx-auto w-full px-4 py-6">
+    
+    <!-- Welcome state when no messages -->
+    <div id="welcome" class="flex-1 flex flex-col items-center justify-center text-center py-12">
+      <div class="w-16 h-16 bg-brand-600/20 rounded-2xl flex items-center justify-center text-3xl mb-6">🤖</div>
+      <h1 class="text-2xl font-bold mb-2">Ask me anything about HR policies</h1>
+      <p class="text-slate-400 max-w-sm mb-8">
+        I know your employee handbook, PTO policies, benefits, and more. 
+        Type a question below to get started.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-lg w-full">
+        <button onclick="askQuestion('How many sick days do I get per year?')" class="text-left p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:bg-slate-700/60 transition-colors text-sm">
+          <span class="text-slate-400">Try:</span> "How many sick days do I get?"
+        </button>
+        <button onclick="askQuestion('What is the remote work policy?')" class="text-left p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:bg-slate-700/60 transition-colors text-sm">
+          <span class="text-slate-400">Try:</span> "What's the remote work policy?"
+        </button>
+        <button onclick="askQuestion('Can I expense a home office chair?')" class="text-left p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:bg-slate-700/60 transition-colors text-sm">
+          <span class="text-slate-400">Try:</span> "Can I expense a chair?"
+        </button>
+        <button onclick="askQuestion('How do I submit an expense report?')" class="text-left p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:bg-slate-700/60 transition-colors text-sm">
+          <span class="text-slate-400">Try:</span> "How do I submit expenses?"
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat messages -->
+    <div id="chat-container" class="hidden flex-1 overflow-y-auto chat-scroll space-y-4 mb-4">
+    </div>
+
+    <!-- Suggested follow-ups (shown after first answer) -->
+    <div id="follow-ups" class="hidden mb-4 flex flex-wrap gap-2">
+    </div>
+
+    <!-- Input area -->
+    <div class="border border-slate-700/60 rounded-2xl bg-slate-800/40 p-2 flex gap-2 items-end">
+      <textarea 
+        id="question-input" 
+        placeholder="Ask about PTO, policies, benefits..."
+        rows="1"
+        class="flex-1 bg-transparent text-white placeholder-slate-500 resize-none outline-none px-3 py-2 text-sm"
+        onkeydown="handleKeyDown(event)"
+        oninput="autoGrow(this)"
+      ></textarea>
+      <button 
+        id="send-btn"
+        onclick="sendQuestion()"
+        class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+      >
+        <svg id="send-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+        <svg id="loading-icon" class="w-4 h-4 hidden animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25" stroke-width="4"/>
+          <path stroke-linecap="round" stroke-width="4" d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/>
+        </svg>
+      </button>
+    </div>
+    <p class="text-center text-slate-600 text-xs mt-2">Powered by AI · Always verify with HR for critical matters</p>
+  </main>
+
+  <!-- KB Setup Modal -->
+  <div id="setup-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/50 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto">
+      <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold">Knowledge Base</h2>
+          <p class="text-slate-400 text-sm">Add your employee handbook and policies</p>
+        </div>
+        <button onclick="hideSetup()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      
+      <!-- Add document -->
+      <div class="p-6 border-b border-slate-800">
+        <h3 class="font-semibold mb-3 text-sm">Add Document</h3>
+        <input id="doc-title" type="text" placeholder="Document title (e.g. Employee Handbook 2026)" 
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-2 outline-none focus:border-brand-500 text-white placeholder-slate-500">
+        <textarea id="doc-text" placeholder="Paste document content here..." rows="5"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-2 outline-none focus:border-brand-500 text-white placeholder-slate-500 resize-none"></textarea>
+        <button onclick="addDocument()" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2 rounded-lg text-sm transition-colors">
+          Add to Knowledge Base
+        </button>
+      </div>
+      
+      <!-- Document list -->
+      <div class="p-6">
+        <h3 class="font-semibold mb-3 text-sm flex items-center justify-between">
+          <span>Documents</span>
+          <span id="modal-kb-count" class="text-slate-500 font-normal">0 documents</span>
+        </h3>
+        <div id="doc-list" class="space-y-2 mb-4">
+          <p class="text-slate-500 text-sm italic">No documents yet. Add your first one above.</p>
+        </div>
+        
+        <!-- Sample documents -->
+        <div class="border-t border-slate-800 pt-4">
+          <p class="text-xs text-slate-500 mb-3">Quick add sample HR documents:</p>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="loadSampleHandbook()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5 transition-colors">Sample Handbook</button>
+            <button onclick="loadSamplePolicies()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5 transition-colors">Sample Policies</button>
+            <button onclick="loadSampleBenefits()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg px-3 py-1.5 transition-colors">Sample Benefits</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin + '/api';
+    let chatHistory = [];
+    let isLoading = false;
+
+    // ─── Chat Functions ────────────────────────────────────────────────────────
+
+    async function sendQuestion() {
+      const input = document.getElementById('question-input');
+      const question = input.value.trim();
+      if (!question || isLoading) return;
+
+      isLoading = true;
+      setLoading(true);
+      
+      // Hide welcome, show chat
+      document.getElementById('welcome').classList.add('hidden');
+      document.getElementById('chat-container').classList.remove('hidden');
+      
+      // Add user message
+      addMessage(question, 'user');
+      input.value = '';
+      input.style.height = 'auto';
+      
+      // Scroll to bottom
+      await new Promise(r => setTimeout(r, 50));
+      scrollChat();
+
+      try {
+        const res = await fetch(API + '/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+        
+        if (data.answer) {
+          addMessage(data.answer, 'ai', data.source);
+          showFollowUps(question);
+        } else {
+          addMessage('Sorry, I encountered an error. Please try again.', 'ai', 'error');
+        }
+      } catch (err) {
+        addMessage('Could not connect to the server. Make sure the backend is running.', 'ai', 'error');
+      }
+
+      isLoading = false;
+      setLoading(false);
+      scrollChat();
+    }
+
+    function askQuestion(q) {
+      document.getElementById('question-input').value = q;
+      sendQuestion();
+    }
+
+    function addMessage(text, role, source) {
+      const container = document.getElementById('chat-container');
+      const div = document.createElement('div');
+      div.className = 'fade-in flex gap-3 ' + (role === 'user' ? 'justify-end' : '');
+      
+      if (role === 'user') {
+        div.innerHTML = `
+          <div class="max-w-xs sm:max-w-md bg-brand-600/80 rounded-2xl rounded-tr-sm px-4 py-3 text-sm">
+            ${escapeHtml(text)}
+          </div>
+          <div class="w-7 h-7 bg-slate-600 rounded-full flex-shrink-0 flex items-center justify-center text-xs flex-shrink-0">👤</div>
+        `;
+      } else {
+        const sourceTag = source && source !== 'demo' ? `<span class="kb-tag ml-2">${source}</span>` : '';
+        div.innerHTML = `
+          <div class="w-7 h-7 bg-brand-500 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
+          <div class="max-w-xs sm:max-w-lg bg-slate-800/80 border border-slate-700/50 rounded-2xl rounded-tl-sm px-4 py-3 text-sm whitespace-pre-wrap">
+            ${escapeHtml(text).replace(/
+/g, '<br>')}
+          </div>
+        `;
+      }
+      
+      container.appendChild(div);
+      chatHistory.push({ role, text });
+    }
+
+    function showFollowUps(originalQuestion) {
+      const followUps = document.getElementById('follow-ups');
+      const suggestions = [
+        "Can I get more details on that?",
+        "What if I need to escalate this?",
+        "Who should I contact for exceptions?"
+      ];
+      
+      followUps.classList.remove('hidden');
+      followUps.innerHTML = suggestions.map(s => 
+        `<button onclick="askQuestion('${s}')" class="text-xs bg-slate-800/80 border border-slate-700/50 hover:border-slate-600 rounded-full px-3 py-1.5 transition-colors">${s}</button>`
+      ).join('');
+    }
+
+    function setLoading(loading) {
+      const icon = document.getElementById('send-icon');
+      const loadingIcon = document.getElementById('loading-icon');
+      const btn = document.getElementById('send-btn');
+      icon.classList.toggle('hidden', loading);
+      loadingIcon.classList.toggle('hidden', !loading);
+      btn.disabled = loading;
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendQuestion();
+      }
+    }
+
+    function autoGrow(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    function scrollChat() {
+      const container = document.getElementById('chat-container');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ─── Knowledge Base Functions ──────────────────────────────────────────────
+
+    async function loadKB() {
+      try {
+        const res = await fetch(API + '/kb');
+        if (!res.ok) throw new Error('Backend not running');
+        const data = await res.json();
+        
+        document.getElementById('kb-count').textContent = data.total_docs + ' docs';
+        const dot = document.getElementById('kb-dot');
+        dot.className = 'w-2 h-2 rounded-full ' + (data.total_docs > 0 ? 'bg-green-500' : 'bg-slate-600');
+        
+        updateDocList(data.documents || []);
+      } catch (e) {
+        document.getElementById('kb-count').textContent = 'offline';
+        document.getElementById('kb-dot').className = 'w-2 h-2 rounded-full bg-red-500';
+      }
+    }
+
+    async function addDocument() {
+      const titleInput = document.getElementById('doc-title');
+      const textInput = document.getElementById('doc-text');
+      const title = titleInput.value.trim();
+      const text = textInput.value.trim();
+      
+      if (!text) return alert('Please enter document content');
+      if (!title) return alert('Please enter a document title');
+      
+      try {
+        const res = await fetch(API + '/kb/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, text })
+        });
+        const data = await res.json();
+        
+        titleInput.value = '';
+        textInput.value = '';
+        
+        await loadKB();
+        
+        // Auto-ask a test question if this is the first doc
+        if (data.doc_count === 1) {
+          addMessage("I've added the document. Try asking a question to test it out!", 'ai', 'system');
+          document.getElementById('welcome').classList.add('hidden');
+          document.getElementById('chat-container').classList.remove('hidden');
+        }
+      } catch (e) {
+        alert('Failed to add document. Is the backend running?');
+      }
+    }
+
+    async function removeDocument(docId) {
+      if (!confirm('Remove this document from the knowledge base?')) return;
+      try {
+        await fetch(API + '/kb/remove/' + docId, { method: 'DELETE' });
+        await loadKB();
+      } catch (e) {
+        alert('Failed to remove document');
+      }
+    }
+
+    function updateDocList(docs) {
+      const list = document.getElementById('doc-list');
+      const count = document.getElementById('modal-kb-count');
+      count.textContent = docs.length + ' document' + (docs.length !== 1 ? 's' : '');
+      
+      if (!docs.length) {
+        list.innerHTML = '<p class="text-slate-500 text-sm italic">No documents yet. Add your first one above.</p>';
+        return;
+      }
+      
+      list.innerHTML = docs.map(d => `
+        <div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2">
+          <div>
+            <div class="text-sm font-medium">${escapeHtml(d.title)}</div>
+            <div class="text-xs text-slate-500">${d.chars?.toLocaleString() || 0} chars · added ${new Date(d.added_at).toLocaleDateString()}</div>
+          </div>
+          <button onclick="removeDocument('${d.id}')" class="text-red-400 hover:text-red-300 text-xs ml-2">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function showSetup() {
+      document.getElementById('setup-modal').classList.remove('hidden');
+      loadKB();
+    }
+
+    function hideSetup() {
+      document.getElementById('setup-modal').classList.add('hidden');
+    }
+
+    // Close modal on outside click
+    document.getElementById('setup-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) hideSetup();
+    });
+
+    // ─── Sample Data ──────────────────────────────────────────────────────────
+
+    function loadSampleHandbook() {
+      document.getElementById('doc-title').value = 'Employee Handbook 2026';
+      document.getElementById('doc-text').value = `EMPLOYEE HANDBOOK — ACME CORP 2026
+
+SECTION 1: PAID TIME OFF (PTO)
+- Full-time employees receive 15 days of PTO per year, accrued monthly
+- PTO can be carried over up to 5 days maximum; unused days beyond 5 are forfeited on Jan 1
+- PTO requests must be submitted at least 2 weeks in advance for approval
+- PTO is paid out upon termination at your current rate
+
+SECTION 2: SICK LEAVE
+- Employees receive 10 paid sick days per year
+- Sick days do not roll over — use them or lose them by December 31
+- Sick leave over 3 consecutive days requires a doctor's note
+- Sick days can be used for personal illness, medical appointments, or caring for an immediate family member
+
+SECTION 3: REMOTE WORK POLICY
+- Employees may work remotely up to 2 days per week with manager approval
+- Core in-office days are Tuesday and Thursday for all teams
+- Remote work arrangements must be approved in writing by your direct manager
+- Working remotely internationally requires 30 days advance notice and HR approval
+
+SECTION 4: EXPENSE REIMBURSEMENT
+- Home office equipment up to $300 per year is reimbursable
+- Approved categories: ergonomics (chairs, standing desks), monitors, keyboards
+- Expense reports must be submitted within 30 days of purchase
+- Submit via Expensify: expensify.com/acme — receipts required for all items over $25
+- Reimbursement cycles are twice monthly, on the 15th and last day
+
+SECTION 5: BENEFITS OVERVIEW
+- Health insurance: Company covers 80% of premium for employee, 60% for dependents
+- Dental: Company covers 50% of premium
+- Vision: Company covers 50% of premium
+- 401(k): 4% company match, vests over 3 years (33% per year)
+- Life insurance: 2x annual salary, company-paid
+
+SECTION 6: PARENTAL LEAVE
+- Birth parents: 16 weeks paid leave at 100% salary
+- Non-birth parents: 8 weeks paid leave at 100% salary
+- Must be taken within 12 months of birth/adoption
+- Additional 4 weeks unpaid leave available upon request
+
+SECTION 7: PROFESSIONAL DEVELOPMENT
+- $1,500 annual learning budget per employee
+- Covers: courses, conferences, books, certifications
+- Must be pre-approved by manager
+- Unused budget does not roll over`;
+    }
+
+    function loadSamplePolicies() {
+      document.getElementById('doc-title').value = 'Company Policies';
+      document.getElementById('doc-text').value = `COMPANY POLICIES — ACME CORP
+
+REMOTE WORK POLICY
+- Employees may work remotely up to 2 days per week with manager approval
+- Core in-office days: Tuesday and Thursday
+- International remote work: 30 days advance notice + HR approval required
+- Remote work is a privilege, not a right — performance standards apply equally
+
+EXPENSE POLICY
+- All expenses over $25 require receipts
+- Home office reimbursable up to $300/year (ergonomics, monitors, keyboards)
+- Submit via Expensify within 30 days of purchase
+- Reimbursement runs on the 15th and last day of each month
+- Meals while traveling: up to $75/day domestically, $100/day internationally
+
+ATTENDANCE POLICY
+- Core hours: 10am-3pm in your local timezone
+- Flexible start/end times outside core hours
+- Notify your manager by 9am if you'll be unavailable during core hours
+- Three unexplained absences in a 90-day period triggers a review
+
+SOCIAL MEDIA POLICY
+- You may not speak on behalf of the company without marketing approval
+- Keep personal opinions clearly separate from company affiliation
+- Harassment of colleagues or customers on social media is grounds for termination
+
+CODE OF CONDUCT
+- Treat all colleagues, customers, and partners with respect
+- Harassment, discrimination, or retaliation is never tolerated
+- Report concerns to HR or via our anonymous ethics hotline: 1-800-555-0199
+- Violations may result in termination without warning`;
+    }
+
+    function loadSampleBenefits() {
+      document.getElementById('doc-title').value = 'Benefits Guide';
+      document.getElementById('doc-text').value = `EMPLOYEE BENEFITS GUIDE — ACME CORP 2026
+
+HEALTH INSURANCE
+- Provider: BlueCross BlueShield PPO
+- Employee premium: Company pays 80%
+- Dependent premium: Company pays 60%
+- Deductible: $500 individual / $1,000 family
+- Out-of-pocket max: $3,000 individual / $6,000 family
+- Open enrollment: November 1-15 each year
+
+DENTAL INSURANCE
+- Provider: Delta Dental PPO
+- Company covers 50% of premium
+- Covers: 2 cleanings/year, 80% of basic procedures, 50% major procedures
+- Orthodontia: 50% up to $2,000 lifetime maximum
+
+VISION INSURANCE
+- Provider: VSP
+- Company covers 50% of premium
+- Exam: covered once per year
+- Frames/contacts: up to $200 allowance per year
+
+401(K) RETIREMENT
+- Eligibility: immediately upon hire
+- Company match: 4% of salary (you must contribute 4% to receive full match)
+- Vesting: 33% per year over 3 years (cliff at 1 year)
+- Contribution limit: IRS annual maximum ($23,000 in 2026, $7,500 catch-up if 50+)
+
+LIFE INSURANCE
+- Coverage: 2x your annual base salary
+- Company-paid for all full-time employees
+- AD&D: additional 1x salary
+- Supplemental life insurance available at employee cost
+
+MENTAL HEALTH
+- Employee Assistance Program (EAP): free 8 counseling sessions/year
+- Therapy/psychiatry: covered under health insurance as any other medical expense
+- Headspace subscription: free for all employees
+- Mental health days: 3 additional paid days per year, no questions asked`;
+    }
+
+    // ─── Init ──────────────────────────────────────────────────────────────────
+    loadKB();
+    setInterval(loadKB, 30000); // Refresh KB status every 30s
+  </script>
+
+</body>
+</html>
