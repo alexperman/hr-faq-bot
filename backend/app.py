@@ -17,7 +17,7 @@ from flask_cors import CORS
 # Set GROQ_API_KEY environment variable before running
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
-app = Flask(__name__, static_folder="../")
+app = Flask(__name__)
 CORS(app)
 
 # ─── Data Storage ────────────────────────────────────────────────────────────
@@ -141,11 +141,33 @@ def ask_groq(prompt):
     except Exception as e:
         return {"answer": f"Error: {str(e)}", "source": None}
 
-# ─── API Routes ──────────────────────────────────────────────────────────────
+# ─── HTML Page Routes ─────────────────────────────────────────────────────────
 
 @app.route("/")
-def index():
+def serve_index():
+    return send_from_directory(".", "index.html")
+
+@app.route("/index")
+@app.route("/index.html")
+def serve_index_html():
+    return send_from_directory(".", "index.html")
+
+@app.route("/presell")
+@app.route("/presell.html")
+def serve_presell():
+    return send_from_directory(".", "presell.html")
+
+@app.route("/product")
+@app.route("/product.html")
+def serve_product():
     return send_from_directory(".", "product.html")
+
+@app.route("/success")
+@app.route("/success.html")
+def serve_success():
+    return send_from_directory(".", "success.html")
+
+# ─── API Routes ──────────────────────────────────────────────────────────────
 
 @app.route("/api/kb", methods=["GET"])
 def api_get_kb():
