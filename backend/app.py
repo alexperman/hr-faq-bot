@@ -22,8 +22,11 @@ CORS(app)
 
 # ─── Data Storage ────────────────────────────────────────────────────────────
 
-KB_FILE = "knowledge_base.json"
-SESSIONS_FILE = "sessions.json"
+# Use /tmp for Render compatibility (ephemeral filesystem)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IS_RENDER = os.environ.get("PORT", "") != ""
+KB_FILE = "/tmp/knowledge_base.json" if IS_RENDER else os.path.join(BASE_DIR, "knowledge_base.json")
+SESSIONS_FILE = "/tmp/sessions.json" if IS_RENDER else os.path.join(BASE_DIR, "sessions.json")
 
 def load_json(path, default):
     try:
@@ -136,8 +139,11 @@ def ask_groq(prompt):
                 "model": result.get("model", "unknown")
             }
     except urllib.error.HTTPError as e:
-        error_body = json.loads(e.read())
-        return {"answer": f"API Error: {error_body.get('error', {}).get('message', str(e))}", "source": None}
+        try:
+            error_body = json.loads(e.read())
+            return {"answer": f"API Error: {error_body.get('error', {}).get('message', str(e))}", "source": None}
+        except Exception:
+            return {"answer": f"API Error (HTTP {e.code}): {str(e)}", "source": None}
     except Exception as e:
         return {"answer": f"Error: {str(e)}", "source": None}
 
