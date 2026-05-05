@@ -5,6 +5,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/alterzahen"
+    ALLOWED_ORIGINS: str = "*"  # Comma-separated list in production
 
     # JWT
     SECRET_KEY: str = "change-me-in-production-use-openssl-rand-base64-32"
