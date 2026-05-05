@@ -1,8 +1,12 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class Tenant(Base):
@@ -14,7 +18,7 @@ class Tenant(Base):
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     primary_color: Mapped[str] = mapped_column(String(7), default="#3B82F6")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     users: Mapped[list["User"]] = relationship(back_populates="tenant", lazy="selectin")
     documents: Mapped[list["Document"]] = relationship(back_populates="tenant", lazy="selectin")
