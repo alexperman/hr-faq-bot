@@ -96,7 +96,7 @@ INSTRUCTIONS:
 - Be concise but complete
 - Format your answer with bullet points if it helps clarity
 - End with the specific source document and section if available
-- If answering from the KB, end with: "[Source: {doc['title']}]"
+- Cite the source document title in your answer when using KB content
 
 EMPLOYEE QUESTION: {question}
 
