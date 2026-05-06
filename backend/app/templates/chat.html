@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #fff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e1e4e8;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        header nav {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        header nav a {
+            text-decoration: none;
+            color: #4a5568;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        header nav a:hover {
+            background: #f0f2f5;
+        }
+        header nav button {
+            background: #e53e3e;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        header nav button:hover {
+            background: #c53030;
+        }
+        #chat-container {
+            flex: 1;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #chat-history {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 16px;
+        }
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+        .message.user {
+            align-self: flex-end;
+            background: #2563eb;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .message.ai {
+            align-self: flex-start;
+            background: #e2e8f0;
+            color: #1a1a2e;
+            border-bottom-left-radius: 4px;
+        }
+        .sources {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            font-size: 12px;
+            color: #718096;
+        }
+        .sources strong {
+            color: #4a5568;
+        }
+        .sources ul {
+            margin: 4px 0 0 16px;
+            padding: 0;
+        }
+        .sources li {
+            margin: 2px 0;
+        }
+        .sources a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .sources a:hover {
+            text-decoration: underline;
+        }
+        #input-area {
+            display: flex;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid #e1e4e8;
+        }
+        #question {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e1e4e8;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #question:focus {
+            border-color: #2563eb;
+        }
+        #question:disabled {
+            background: #f0f2f5;
+            cursor: not-allowed;
+        }
+        #ask-btn {
+            padding: 12px 24px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #ask-btn:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+        #ask-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        .typing {
+            align-self: flex-start;
+            background: #e2e8f0;
+            color: #718096;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-style: italic;
+        }
+        #login-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #f0f2f5;
+        }
+        #login-screen h2 {
+            font-size: 24px;
+            color: #1a1a2e;
+            margin-bottom: 24px;
+        }
+        #login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 320px;
+        }
+        #login-form input {
+            padding: 12px 16px;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+        #login-form input:focus {
+            border-color: #2563eb;
+        }
+        #login-form button {
+            padding: 12px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        #login-form button:hover {
+            background: #1d4ed8;
+        }
+        #login-error {
+            color: #e53e3e;
+            font-size: 13px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <h2>HR Assistant Login</h2>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+            <div id="login-error"></div>
+        </form>
+    </div>
+
+    <header>
+        <h1>HR Assistant</h1>
+        <nav>
+            <a href="/manage" id="manage-link">Manage KB</a>
+            <button id="logout-btn">Logout</button>
+        </nav>
+    </header>
+
+    <div id="chat-container">
+        <div id="chat-history"></div>
+        <div id="input-area">
+            <input type="text" id="question" placeholder="Ask a question..." autocomplete="off">
+            <button id="ask-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const questionInput = document.getElementById('question');
+        const askBtn = document.getElementById('ask-btn');
+        const loginScreen = document.getElementById('login-screen');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const manageLink = document.getElementById('manage-link');
+
+        let jwt = localStorage.getItem('jwt');
+        let tenant = localStorage.getItem('tenant') || 'default';
+
+        function updateManageLink() {
+            manageLink.href = `/${tenant}/manage`;
+        }
+
+        function checkAuth() {
+            if (!jwt) {
+                loginScreen.style.display = 'flex';
+                document.querySelector('header').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'none';
+            } else {
+                loginScreen.style.display = 'none';
+                document.querySelector('header').style.display = 'flex';
+                document.getElementById('chat-container').style.display = 'flex';
+                updateManageLink();
+            }
+        }
+
+        function addMessage(content, isUser, sources = null) {
+            const msg = document.createElement('div');
+            msg.className = `message ${isUser ? 'user' : 'ai'}`;
+            msg.textContent = content;
+
+            if (!isUser && sources && sources.length > 0) {
+                const sourcesDiv = document.createElement('div');
+                sourcesDiv.className = 'sources';
+                sourcesDiv.innerHTML = `<strong>Sources:</strong><ul>${sources.map(s => 
+                    `<li>${s.url ? `<a href="${s.url}" target="_blank">${s.title || s.url}</a>` : s.title || 'Source'}</li>`
+                ).join('')}</ul>`;
+                msg.appendChild(sourcesDiv);
+            }
+
+            chatHistory.appendChild(msg);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function showTyping() {
+            const typing = document.createElement('div');
+            typing.className = 'typing';
+            typing.id = 'typing-indicator';
+            typing.textContent = 'Typing...';
+            chatHistory.appendChild(typing);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typing-indicator');
+            if (typing) typing.remove();
+        }
+
+        async function askQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            addMessage(question, true);
+            questionInput.value = '';
+            questionInput.disabled = true;
+            askBtn.disabled = true;
+            showTyping();
+
+            try {
+                const response = await fetch(`/${tenant}/chat/ask`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwt}`
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                if (response.status === 401) {
+                    jwt = null;
+                    localStorage.removeItem('jwt');
+                    checkAuth();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                hideTyping();
+                addMessage(data.answer, false, data.sources);
+            } catch (err) {
+                hideTyping();
+                addMessage('Sorry, I encountered an error processing your request.', false);
+            } finally {
+                questionInput.disabled = false;
+                askBtn.disabled = false;
+                questionInput.focus();
+            }
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            loginError.textContent = '';
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    loginError.textContent = err.detail || 'Login failed';
+                    return;
+                }
+
+                const data = await response.json();
+                jwt = data.access_token;
+                tenant = data.tenant || 'default';
+                localStorage.setItem('jwt', jwt);
+                localStorage.setItem('tenant', tenant);
+                checkAuth();
+            } catch (err) {
+                loginError.textContent = 'Connection error';
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            jwt = null;
+            localStorage.removeItem('jwt');
+            chatHistory.innerHTML = '';
+            checkAuth();
+        });
+
+        askBtn.addEventListener('click', askQuestion);
+        questionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') askQuestion();
+        });
+
+        checkAuth();
+    </script>
+</body>
+</html>

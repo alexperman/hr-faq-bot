@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KB Management - Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; }
+        .container { display: flex; min-height: 100vh; }
+        
+        /* Left Panel */
+        .left-panel { width: 50%; padding: 24px; border-right: 1px solid #ddd; overflow-y: auto; }
+        .left-panel h2 { margin-bottom: 20px; color: #333; }
+        .doc-card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .doc-card h3 { color: #222; font-size: 16px; margin-bottom: 8px; }
+        .doc-meta { display: flex; gap: 16px; color: #666; font-size: 13px; margin-bottom: 8px; }
+        .doc-meta span { display: flex; align-items: center; }
+        .delete-btn { background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .delete-btn:hover { background: #c82333; }
+        
+        /* Right Panel */
+        .right-panel { width: 50%; padding: 24px; background: white; }
+        .right-panel h2 { margin-bottom: 20px; color: #333; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #555; font-weight: 500; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { min-height: 200px; resize: vertical; font-family: inherit; }
+        .submit-btn { background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 15px; width: 100%; }
+        .submit-btn:hover { background: #218838; }
+        
+        .message { padding: 12px; border-radius: 6px; margin-bottom: 16px; display: none; }
+        .message.success { background: #d4edda; color: #155724; display: block; }
+        .message.error { background: #f8d7da; color: #721c24; display: block; }
+        .loading { text-align: center; color: #666; padding: 20px; }
+        .empty-state { text-align: center; color: #999; padding: 40px 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h2>Documents</h2>
+            <div id="doc-list"><div class="loading">Loading documents...</div></div>
+        </div>
+        <div class="right-panel">
+            <h2>Add Document</h2>
+            <div id="message" class="message"></div>
+            <form id="add-form">
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="content">Content</label>
+                    <textarea id="content" name="content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="source_url">Source URL</label>
+                    <input type="url" id="source_url" name="source_url" placeholder="https://">
+                </div>
+                <button type="submit" class="submit-btn">Add Document</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN_KEY = 'jwt_token';
+        const TENANT_KEY = 'tenant_slug';
+
+        function getToken() { return localStorage.getItem(TOKEN_KEY); }
+        function getTenant() { return localStorage.getItem(TENANT_KEY); }
+
+        function redirectToLogin() {
+            window.location.href = '/login';
+        }
+
+        function showMessage(msg, isError) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = 'message ' + (isError ? 'error' : 'success');
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', { 
+                year: 'numeric', month: 'short', day: 'numeric' 
+            });
+        }
+
+        async function loadDocuments() {
+            const token = getToken();
+            const tenant = getTenant();
+            if (!token || !tenant) return redirectToLogin();
+
+            const list = document.getElementById('doc-list');
+            try {
+                const res = await fetch(`/${tenant}/kb/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) return redirectToLogin();
+                if (!res.ok) throw new Error('Failed to load');
+
+                const docs = await res.json();
+                if (!docs.length) {
+                    list.innerHTML = '<div class="empty-state">No documents yet. Add one to get started.</div>';
+                    return;
+                }
+
+                list.innerHTML = docs.map(doc => `
+                    <div class="doc-card">
+                        <h3>${escapeHtml(doc.title)}</h3>
+                        <div class="doc-meta">
+                            <span>${doc.char_count || 0} chars</span>
+                            <span>${formatDate(doc.created_at)}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteDoc(${doc.id})">Delete</button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                list.innerHTML = '<div class="empty-state">Error loading documents.</div>';
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function deleteDoc(id) {
+            if (!confirm('Delete this document?')) return;
+            const token = getToken();
+            const tenant = getTenant();
+
+            try {
+                const res = await fetch(`/${tenant}/kb/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) return redirectToLogin();
+                if (!res.ok) throw new Error('Delete failed');
+                showMessage('Document deleted.', false);
+                loadDocuments();
+            } catch (e) {
+                showMessage('Error deleting document.', true);
+            }
+        }
+
+        document.getElementById('add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = getToken();
+            const tenant = getTenant();
+            if (!token || !tenant) return redirectToLogin();
+
+            const data = {
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value,
+                source_url: document.getElementById('source_url').value
+            };
+
+            try {
+                const res = await fetch(`/${tenant}/kb/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (res.status === 401) return redirectToLogin();
+                if (!res.ok) throw new Error('Add failed');
+
+                showMessage('Document added.', false);
+                e.target.reset();
+                loadDocuments();
+            } catch (e) {
+                showMessage('Error adding document.', true);
+            }
+        });
+
+        // Init
+        if (!getToken()) redirectToLogin();
+        else loadDocuments();
+    </script>
+</body>
+</html>

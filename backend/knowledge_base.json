@@ -1,0 +1,28 @@
+{
+  "documents": [
+    {
+      "id": "acme-handbook",
+      "title": "Acme Corp Employee Handbook 2026",
+      "source": "HR",
+      "content": "ACME CORP EMPLOYEE HANDBOOK 2026\n\nSECTION 1: PAID TIME OFF (PTO)\nAll full-time employees receive PTO as follows:\n- 0-1 years: 15 days PTO per year\n- 1-3 years: 20 days PTO per year\n- 3+ years: 25 days PTO per year\nPTO accrues monthly and is available immediately upon accrual.\nUnused PTO rolls over up to 5 days maximum per year.\nPTO over the 5-day rollover limit is forfeited on Dec 31.\nRequest PTO at least 2 weeks in advance for periods over 3 days.\nEmergency PTO requests require manager approval.\n\nSECTION 2: REMOTE WORK POLICY\nEmployees may work remotely up to 3 days per week.\nCore hours: 10am-3pm in your local timezone (all employees must be available).\nRemote work requires reliable high-speed internet.\nAcme Corp reimburses $50/month for home internet costs (submit expense report monthly).\nRemote work arrangements must be approved by your direct manager.\nNew employees: 90-day probation before remote work eligibility.\n\nSECTION 3: EXPENSE REIMBURSEMENT\nHome office equipment: Up to $500 one-time allowance for new hires (desk, chair, monitor).\nMonthly internet: Up to $50/month reimbursement.\nBusiness travel: Pre-approved travel expenses reimbursed at cost.\nMeals during travel: $50/day maximum.\nAll expenses require receipts and must be submitted within 30 days.\nExpense reports submitted via Expensify (link in IT onboarding email).\n\nSECTION 4: SICK LEAVE\n10 sick days per year, non-accruing (reset Jan 1).\nSick leave can be used for personal illness, medical appointments, or caring for immediate family.\nDoctor's note required for absences exceeding 3 consecutive days.\nUnused sick days do not roll over or pay out.\n\nSECTION 5: PARENTAL LEAVE\nPrimary caregiver: 16 weeks paid parental leave at 100% salary.\nSecondary caregiver: 4 weeks paid parental leave at 100% salary.\nMust have been employed for 6+ months to qualify.\nParental leave must be taken within 12 months of birth/adoption.",
+      "added_at": "2026-01-01T00:00:00",
+      "chunk_count": 10
+    },
+    {
+      "id": "remote-work",
+      "title": "Remote Work Guidelines",
+      "source": "Operations",
+      "content": "REMOTE WORK GUIDELINES (Updated Jan 2026)\n\nELIGIBILITY:\nAll full-time employees after 90-day probation period.\nContract workers: Not eligible for remote work.\nInternational employees: Subject to local law compliance.\n\nTECHNOLOGY REQUIREMENTS:\nCompany-issued laptop (IT provides).\nVPN must be connected during core hours.\nSecurity: Password-protected home WiFi, no public networks during work hours.\nBackup: Must have mobile hotspot available as backup connectivity.\n\nHOME OFFICE SETUP:\nDedicated workspace recommended (not a couch or bed).\nAdequate lighting for video calls.\nQuiet environment during client-facing meetings.\n\nCOMMUNICATION:\nSlack response expected within 2 hours during core hours (10am-3pm local).\nEmail response expected within 4 hours during work hours.\nCamera on during team meetings (exceptions allowed, notify manager).",
+      "added_at": "2026-01-01T00:00:00",
+      "chunk_count": 6
+    },
+    {
+      "id": "benefits-2026",
+      "title": "Benefits Summary 2026",
+      "source": "HR",
+      "content": "ACME CORP BENEFITS SUMMARY 2026\n\nHEALTH INSURANCE:\nMedical: Blue Shield PPO, 100% premium covered for employee, 80% for dependents.\nDental: Delta Dental, 100% premium covered for employee.\nVision: VSP, $200 annual frame allowance.\n\nRETIREMENT:\n401(k) with 4% company match (100% vested after 2 years).\nRoth 401(k) option available.\nFinancial planning sessions: 2 free per year with certified planner.\n\nOTHER BENEFITS:\nMental health: 12 free therapy sessions per year via Spring Health.\nLearning budget: $1,500/year for courses, conferences, certifications.\nCommuter benefits: $315/month pre-tax transit pass.\nGym: $75/month reimbursement for any gym or fitness app.\nEmployee assistance program (EAP): Free confidential counseling 24/7.",
+      "added_at": "2026-01-01T00:00:00",
+      "chunk_count": 5
+    }
+  ]
+}
