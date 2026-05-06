@@ -49,9 +49,9 @@ def app_with_temp_kb():
     kb_path = os.path.join(temp_dir, "knowledge_base.json")
     sessions_path = os.path.join(temp_dir, "sessions.json")
 
-    # Import app.py directly by file path to avoid collision with app/ package
+    # Import replyiq.py directly by file path to avoid collision with app/ package
     import importlib.util
-    spec = importlib.util.spec_from_file_location("replyiq", os.path.join(os.path.dirname(__file__), "app.py"))
+    spec = importlib.util.spec_from_file_location("replyiq", os.path.join(os.path.dirname(__file__), "replyiq.py"))
     replyiq = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(replyiq)
 
