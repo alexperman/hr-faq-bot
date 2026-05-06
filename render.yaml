@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: hr-faq-bot
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn replyiq:app --bind 0.0.0.0:$PORT
