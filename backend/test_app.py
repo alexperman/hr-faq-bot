@@ -9,6 +9,7 @@ import os
 import json
 import tempfile
 import shutil
+from pathlib import Path
 
 # Ensure app module is importable
 sys.path.insert(0, os.path.dirname(__file__))
@@ -20,44 +21,42 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 _TEMP_DIR = None
 
+
 def _setup_temp_env():
     global _TEMP_DIR
     if _TEMP_DIR is None:
         _TEMP_DIR = tempfile.mkdtemp(prefix="replyiq_test_")
-        kb_file = os.path.join(_TEMP_DIR, "knowledge_base.json")
-        sessions_file = os.path.join(_TEMP_DIR, "sessions.json")
-        with open(kb_file, "w") as f:
-            json.dump({"documents": [], "qna_pairs": []}, f)
-        with open(sessions_file, "w") as f:
-            json.dump({}, f)
     return _TEMP_DIR
 
 
 def _reset_kb():
-    """Clear KB contents without destroying the file."""
+    """Clear manifest and .md files in the temp workspace."""
     global _TEMP_DIR
     if _TEMP_DIR:
-        kb_file = os.path.join(_TEMP_DIR, "knowledge_base.json")
-        with open(kb_file, "w") as f:
-            json.dump({"documents": [], "qna_pairs": []}, f)
+        manifest = Path(_TEMP_DIR) / "manifest.json"
+        if manifest.exists():
+            manifest.unlink()
+        for f in Path(_TEMP_DIR).glob("*.md"):
+            f.unlink()
 
 
 @pytest.fixture(scope="module")
 def app_with_temp_kb():
-    """Patch app KB paths to use temp files, import once, reuse for all tests."""
+    """Patch app workspace to use temp dir, import once, reuse for all tests."""
     temp_dir = _setup_temp_env()
-    kb_path = os.path.join(temp_dir, "knowledge_base.json")
-    sessions_path = os.path.join(temp_dir, "sessions.json")
 
     # Import replyiq.py directly by file path to avoid collision with app/ package
     import importlib.util
-    spec = importlib.util.spec_from_file_location("replyiq", os.path.join(os.path.dirname(__file__), "replyiq.py"))
+    spec = importlib.util.spec_from_file_location(
+        "replyiq", os.path.join(os.path.dirname(__file__), "replyiq.py")
+    )
     replyiq = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(replyiq)
 
-    replyiq.KB_FILE = kb_path
-    replyiq.SESSIONS_FILE = sessions_path
-    replyiq.IS_RENDER = False  # prevent PORT env var from redirecting KB_FILE
+    # Redirect workspace to temp dir
+    replyiq.WORKSPACE_DIR = Path(temp_dir)
+    replyiq.MANIFEST_FILE = Path(temp_dir) / "manifest.json"
+    replyiq.PI_CLIENT = None  # reset lazy client so it picks up new workspace
 
     # Ensure clean state
     _reset_kb()
@@ -147,7 +146,7 @@ class TestKBAPI:
         data = r.get_json()
         assert data["status"] == "added"
         assert data["doc_count"] == 1
-        assert "id" in data
+        assert "doc_id" in data
 
     def test_add_doc_too_short(self, client):
         r = client.post("/api/kb/add",
@@ -168,7 +167,7 @@ class TestKBAPI:
     def test_remove_doc(self, client):
         r = client.post("/api/kb/add",
                         json={"text": "Content." * 20, "title": "To Remove"})
-        doc_id = r.get_json()["id"]
+        doc_id = r.get_json()["doc_id"]
         r = client.delete(f"/api/kb/remove/{doc_id}")
         assert r.get_json()["status"] == "removed"
         assert r.get_json()["doc_count"] == 0

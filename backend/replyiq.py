@@ -1,85 +1,171 @@
 """
 ReplyIQ - AI HR FAQ Assistant
-Flask backend with Groq LLM integration
+Flask backend with Groq LLM + PageIndex cloud RAG
 """
 
 import os
 import json
 import uuid
 import hashlib
+import tempfile
 from datetime import datetime
-from functools import wraps
+from pathlib import Path
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-# NOTE: Groq is free for development. Get your API key at https://console.groq.com
-# Set GROQ_API_KEY environment variable before running
+# API Keys
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+PAGEINDEX_API_KEY = os.environ.get("PAGEINDEX_API_KEY", "")
 
 app = Flask(__name__)
 CORS(app)
 
-# ─── Data Storage ────────────────────────────────────────────────────────────
+# ─── PageIndex Client (lazy init) ────────────────────────────────────────────
 
-# Use /tmp for Render compatibility (ephemeral filesystem)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PI_CLIENT = None
+
+
+def _get_pi():
+    """Return a PageIndexClient, lazily initialised."""
+    global PI_CLIENT
+    if PI_CLIENT is None:
+        from pageindex import PageIndexClient
+
+        PI_CLIENT = PageIndexClient(api_key=PAGEINDEX_API_KEY or None)
+    return PI_CLIENT
+
+
+# ─── Local Manifest (maps doc_id → PageIndex doc_id) ─────────────────────────
+
 IS_RENDER = os.environ.get("PORT", "") != ""
-KB_FILE = "/tmp/knowledge_base.json" if IS_RENDER else os.path.join(BASE_DIR, "knowledge_base.json")
-SESSIONS_FILE = "/tmp/sessions.json" if IS_RENDER else os.path.join(BASE_DIR, "sessions.json")
+MANIFEST_FILE = Path("/tmp/pageindex_manifest.json" if IS_RENDER else Path(__file__).parent / "pageindex_manifest.json")
 
-def load_json(path, default):
+
+def _load_manifest():
     try:
-        with open(path) as f:
+        with open(MANIFEST_FILE) as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return default
+        return {"documents": []}
 
-def save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2, default=str)
 
-# ─── Knowledge Base ──────────────────────────────────────────────────────────
+def _save_manifest(manifest):
+    with open(MANIFEST_FILE, "w") as f:
+        json.dump(manifest, f, indent=2, default=str)
 
-def get_kb():
-    return load_json(KB_FILE, {"documents": [], "qna_pairs": []})
+
+# ─── Knowledge Base (PageIndex cloud RAG) ──────────────────────────────────────
 
 def add_document(text, title="Untitled", source="manual"):
-    kb = get_kb()
-    doc_id = hashlib.sha256(text[:200].encode()).hexdigest()[:12]
-    # Check if already exists
-    for d in kb["documents"]:
-        if d["id"] == doc_id:
-            return {"status": "exists", "id": doc_id, "doc_count": len(kb["documents"])}
-    
-    kb["documents"].append({
-        "id": doc_id,
+    """
+    Write text as a .txt file, submit to PageIndex cloud API,
+    and register the returned doc_id in the local manifest.
+    """
+    manifest = _load_manifest()
+
+    # Dedupe by content hash
+    content_hash = hashlib.sha256(text[:500].encode()).hexdigest()[:16]
+    for doc in manifest["documents"]:
+        if doc.get("content_hash") == content_hash:
+            return {"status": "exists", "doc_id": doc["doc_id"], "doc_count": len(manifest["documents"])}
+
+    doc_id = str(uuid.uuid4())
+
+    # Write content to a temp file for the API
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(text)
+        tmp_path = f.name
+
+    try:
+        pi = _get_pi()
+        result = pi.submit_document(tmp_path, mode="auto")
+        pi_doc_id = result.get("doc_id") or result.get("id") or result.get("document_id")
+        if isinstance(result, dict) and not pi_doc_id:
+            # Try common keys
+            for key in ("doc_id", "id", "document_id", "document", "uuid"):
+                if key in result:
+                    pi_doc_id = result[key]
+                    break
+    except Exception as e:
+        pi_doc_id = None
+        print(f"PageIndex submit_document warning: {e}")
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+    doc_entry = {
+        "doc_id": doc_id,
+        "pi_doc_id": pi_doc_id,
         "title": title,
         "source": source,
-        "content": text,
+        "content_hash": content_hash,
         "added_at": datetime.utcnow().isoformat(),
-        "chunk_count": max(1, len(text) // 500)
-    })
-    save_json(KB_FILE, kb)
-    return {"status": "added", "id": doc_id, "doc_count": len(kb["documents"])}
+        "char_count": len(text),
+    }
+    manifest["documents"].append(doc_entry)
+    _save_manifest(manifest)
+
+    return {"status": "added", "doc_id": doc_id, "doc_count": len(manifest["documents"])}
+
 
 def remove_document(doc_id):
-    kb = get_kb()
-    kb["documents"] = [d for d in kb["documents"] if d["id"] != doc_id]
-    save_json(KB_FILE, kb)
-    return {"status": "removed", "doc_count": len(kb["documents"])}
+    manifest = _load_manifest()
+    doc = next((d for d in manifest["documents"] if d["doc_id"] == doc_id), None)
 
-def get_kb_context():
-    """Combine all KB docs into a single context string for the LLM"""
-    kb = get_kb()
-    if not kb["documents"]:
+    if doc and doc.get("pi_doc_id"):
+        try:
+            pi = _get_pi()
+            pi.delete_document(doc["pi_doc_id"])
+        except Exception as e:
+            print(f"PageIndex delete_document warning: {e}")
+
+    manifest["documents"] = [d for d in manifest["documents"] if d["doc_id"] != doc_id]
+    _save_manifest(manifest)
+    return {"status": "removed", "doc_count": len(manifest["documents"])}
+
+
+def get_kb_context(question=None):
+    """
+    Retrieve relevant KB content for a question using PageIndex cloud API.
+    If question is None, return all document texts as context (no retrieval needed).
+    Falls back to plain text concatenation if PageIndex is unavailable.
+    """
+    manifest = _load_manifest()
+    if not manifest["documents"]:
         return ""
-    
-    context = "## KNOWLEDGE BASE\n\n"
-    for doc in kb["documents"]:
-        context += f"### {doc['title']} (Source: {doc['source']})\n"
-        context += doc["content"] + "\n\n"
-    return context
+
+    if not question:
+        # No question → return all content (for /api/kb listing)
+        return ""
+
+    # Use PageIndex query to retrieve relevant passages
+    pi = _get_pi()
+    all_answers = []
+
+    for doc in manifest["documents"]:
+        pi_doc_id = doc.get("pi_doc_id")
+        if not pi_doc_id:
+            continue
+        try:
+            resp = pi.submit_query(pi_doc_id, question)
+            # submit_query returns a dict with 'answer' or similar
+            if isinstance(resp, dict):
+                answer_text = resp.get("answer", "") or resp.get("response", "")
+                if answer_text and len(answer_text.strip()) > 10:
+                    all_answers.append(f"### {doc['title']} (Source: {doc['source']})\n{answer_text.strip()}\n")
+            elif isinstance(resp, str) and len(resp.strip()) > 10:
+                all_answers.append(f"### {doc['title']} (Source: {doc['source']})\n{resp.strip()}\n")
+        except Exception as e:
+            print(f"PageIndex query warning doc {doc['doc_id']}: {e}")
+            continue
+
+    if not all_answers:
+        return ""
+
+    return "## KNOWLEDGE BASE\n\n" + "\n\n".join(all_answers)
+
 
 # ─── LLM Integration ─────────────────────────────────────────────────────────
 
@@ -102,41 +188,42 @@ EMPLOYEE QUESTION: {question}
 
 ANSWER:"""
 
+
 def ask_groq(prompt):
     import urllib.request
     import urllib.error
-    
+
     if not GROQ_API_KEY:
         return {
             "answer": "⚠️ Groq API key not configured. Set GROQ_API_KEY environment variable.\n\nDemo mode: paste a question and I'll respond from the knowledge base once you've added documents.",
             "source": None,
-            "model": "demo"
+            "model": "demo",
         }
-    
+
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2,
-        "max_tokens": 500
+        "max_tokens": 500,
     }
-    
+
     req = urllib.request.Request(
         "https://api.groq.com/openai/v1/chat/completions",
         data=json.dumps(data).encode(),
         headers={
             "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        method="POST"
+        method="POST",
     )
-    
+
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read())
             return {
                 "answer": result["choices"][0]["message"]["content"],
                 "source": "groq",
-                "model": result.get("model", "unknown")
+                "model": result.get("model", "unknown"),
             }
     except urllib.error.HTTPError as e:
         try:
@@ -147,48 +234,67 @@ def ask_groq(prompt):
     except Exception as e:
         return {"answer": f"Error: {str(e)}", "source": None}
 
+
 # ─── HTML Page Routes ─────────────────────────────────────────────────────────
 
 @app.route("/")
 def serve_index():
     return send_from_directory(".", "index.html")
 
+
 @app.route("/index")
 @app.route("/index.html")
 def serve_index_html():
     return send_from_directory(".", "index.html")
+
 
 @app.route("/presell")
 @app.route("/presell.html")
 def serve_presell():
     return send_from_directory(".", "presell.html")
 
+
 @app.route("/product")
 @app.route("/product.html")
 def serve_product():
     return send_from_directory(".", "product.html")
+
 
 @app.route("/success")
 @app.route("/success.html")
 def serve_success():
     return send_from_directory(".", "success.html")
 
+
 # ─── API Routes ──────────────────────────────────────────────────────────────
 
 @app.route("/api/health", methods=["GET"])
 def api_health():
-    return jsonify({"status": "ok", "app": "replyiq"})
+    return jsonify({
+        "status": "ok",
+        "app": "replyiq",
+        "pageindex": bool(PAGEINDEX_API_KEY),
+    })
+
 
 @app.route("/api/kb", methods=["GET"])
 def api_get_kb():
-    kb = get_kb()
+    manifest = _load_manifest()
     return jsonify({
-        "documents": [{"id": d["id"], "title": d["title"], "source": d["source"], 
-                       "added_at": d["added_at"], "chars": len(d["content"])} 
-                      for d in kb["documents"]],
-        "total_docs": len(kb["documents"]),
-        "total_chars": sum(len(d["content"]) for d in kb["documents"])
+        "documents": [
+            {
+                "id": d["doc_id"],
+                "title": d["title"],
+                "source": d["source"],
+                "added_at": d["added_at"],
+                "chars": d["char_count"],
+            }
+            for d in manifest["documents"]
+        ],
+        "total_docs": len(manifest["documents"]),
+        "total_chars": sum(d["char_count"] for d in manifest["documents"]),
     })
+
 
 @app.route("/api/kb/add", methods=["POST"])
 def api_add_doc():
@@ -196,44 +302,70 @@ def api_add_doc():
     text = body.get("text", "").strip()
     title = body.get("title", "Untitled Document")
     source = body.get("source", "manual")
-    
+
     if not text:
         return jsonify({"error": "No text provided"}), 400
     if len(text) < 50:
         return jsonify({"error": "Document too short (min 50 characters)"}), 400
-    
+
     result = add_document(text, title, source)
     return jsonify(result)
 
+
 @app.route("/api/kb/remove/<doc_id>", methods=["DELETE"])
 def api_remove_doc(doc_id):
-    result = remove_document(doc_id)
-    return jsonify(result)
+    return jsonify(remove_document(doc_id))
+
 
 @app.route("/api/ask", methods=["POST"])
 def api_ask():
     body = request.json
     question = body.get("question", "").strip()
-    
+
     if not question:
         return jsonify({"error": "No question provided"}), 400
-    
-    context = get_kb_context()
+
+    manifest = _load_manifest()
+    if not manifest["documents"]:
+        # No docs → demo mode
+        result = ask_groq(
+            build_prompt(question, "No knowledge base content available.")
+        )
+        return jsonify({
+            "question": question,
+            "answer": result["answer"],
+            "source": result.get("source"),
+            "model": result.get("model"),
+            "kb_doc_count": 0,
+        })
+
+    context = get_kb_context(question)
     prompt = build_prompt(question, context)
     result = ask_groq(prompt)
-    
+
     return jsonify({
         "question": question,
         "answer": result["answer"],
         "source": result.get("source"),
         "model": result.get("model"),
-        "kb_doc_count": len(get_kb()["documents"])
+        "kb_doc_count": len(manifest["documents"]),
     })
+
 
 @app.route("/api/reset", methods=["DELETE"])
 def api_reset():
-    save_json(KB_FILE, {"documents": [], "qna_pairs": []})
+    manifest = _load_manifest()
+    for doc in manifest["documents"]:
+        if doc.get("pi_doc_id"):
+            try:
+                pi = _get_pi()
+                pi.delete_document(doc["pi_doc_id"])
+            except Exception as e:
+                print(f"PageIndex delete warning: {e}")
+    if MANIFEST_FILE.exists():
+        MANIFEST_FILE.unlink()
     return jsonify({"status": "reset"})
+
 
 if __name__ == "__main__":
     print("🚀 ReplyIQ starting on http://localhost:5000")
@@ -244,4 +376,5 @@ if __name__ == "__main__":
     print("   DELETE /api/reset     - reset knowledge base")
     print()
     print("⚠️  Set GROQ_API_KEY env var for AI answers. Free at https://console.groq.com")
+    print("ℹ️  Set PAGEINDEX_API_KEY for reasoning-based retrieval (optional).")
     app.run(host="0.0.0.0", port=5000, debug=True)
