@@ -1,11 +1,4 @@
+pageindex_workspace/
 __pycache__/
 *.pyc
-*.pyo
-venv/
 .venv/
-env/
-.env
-*.json
-!requirements.txt
-knowledge_base.json
-sessions.json
