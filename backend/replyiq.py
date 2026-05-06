@@ -175,6 +175,10 @@ def serve_success():
 
 # ─── API Routes ──────────────────────────────────────────────────────────────
 
+@app.route("/api/health", methods=["GET"])
+def api_health():
+    return jsonify({"status": "ok", "app": "replyiq"})
+
 @app.route("/api/kb", methods=["GET"])
 def api_get_kb():
     kb = get_kb()
