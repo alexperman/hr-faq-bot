@@ -49,8 +49,12 @@ def app_with_temp_kb():
     kb_path = os.path.join(temp_dir, "knowledge_base.json")
     sessions_path = os.path.join(temp_dir, "sessions.json")
 
-    # Import and patch
-    import app as replyiq
+    # Import app.py directly by file path to avoid collision with app/ package
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("replyiq", os.path.join(os.path.dirname(__file__), "app.py"))
+    replyiq = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(replyiq)
+
     replyiq.KB_FILE = kb_path
     replyiq.SESSIONS_FILE = sessions_path
     replyiq.IS_RENDER = False  # prevent PORT env var from redirecting KB_FILE
