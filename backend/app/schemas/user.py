@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 
 
 class UserCreate(BaseModel):
@@ -51,5 +51,4 @@ class UserOut(BaseModel):
     is_owner: bool
     tenant_slug: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
@@ -9,7 +10,18 @@ from app.routers import auth, kb, chat, billing
 
 settings = get_settings()
 
-app = FastAPI(title="AlterZahen API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Shutdown
+    await engine.dispose()
+
+
+app = FastAPI(title="AlterZahen API", version="1.0.0", lifespan=lifespan)
 
 _allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",")]
 app.add_middleware(
@@ -25,12 +37,6 @@ app.include_router(auth.router)
 app.include_router(kb.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
-
-
-@app.on_event("startup")
-async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
 
 BASE_DIR = Path(__file__).parent.parent

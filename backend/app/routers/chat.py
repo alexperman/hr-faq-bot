@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models import User, Document, Tenant
 from app.services.auth import get_current_user
 from app.services.groq import ask_groq
+from app.services.rate_limit import check_rate_limit
 
 
 router = APIRouter(prefix="/{tenant}/chat", tags=["chat"])
@@ -67,7 +68,10 @@ async def ask_question(
     
     Requires JWT authentication and validates tenant access.
     Uses keyword search to find relevant documents, then calls the Groq AI.
+    Rate limited to 20 requests/minute per user.
     """
+    # Rate limit check
+    check_rate_limit(current_user.id)
     # Validate tenant access
     tenant_result = await db.execute(select(Tenant).where(Tenant.slug == tenant))
     db_tenant = tenant_result.scalar_one_or_none()
