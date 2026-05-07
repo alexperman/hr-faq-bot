@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.config import get_settings
@@ -38,15 +39,24 @@ app.include_router(kb.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
 
+# Paths
+BASE_DIR = Path(__file__).parent.parent          # → backend/
+TEMPLATES_DIR = BASE_DIR / "app" / "templates"   # → backend/app/templates
+STATIC_DIR = BASE_DIR / "static"                  # → backend/static
 
-BASE_DIR = Path(__file__).parent.parent
-TEMPLATES_DIR = BASE_DIR / "app" / "templates"
+# Mount static files (create static/ dir if needed)
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+
+# ─── Health ──────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "app": "alterzahen"}
 
+
+# ─── Marketing / Landing Pages ───────────────────────────────────────────────
 
 @app.get("/")
 async def root():
@@ -57,6 +67,28 @@ async def root():
 async def login_page():
     return FileResponse(TEMPLATES_DIR / "login.html")
 
+
+@app.get("/presell")
+async def presell_page():
+    return FileResponse(BASE_DIR / "presell.html")
+
+
+@app.get("/product")
+async def product_page():
+    return FileResponse(BASE_DIR / "product.html")
+
+
+@app.get("/success")
+async def success_page():
+    return FileResponse(BASE_DIR / "success.html")
+
+
+@app.get("/index")
+async def index_page():
+    return RedirectResponse(url="/presell")
+
+
+# ─── App Pages ────────────────────────────────────────────────────────────────
 
 @app.get("/{tenant}/dashboard")
 async def dashboard_page(tenant: str):

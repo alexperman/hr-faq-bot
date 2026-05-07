@@ -1,9 +1,7 @@
 """
-backend/app/ package — FastAPI core (AlterZahen API).
-
-The Flask app (ReplyIQ) lives in replyiq.py and is re-exported here
-so gunicorn app:app can resolve it.
+backend/app/ package — FastAPI application.
 """
-from replyiq import app
+
+from app.main import app
 
 __all__ = ["app"]
