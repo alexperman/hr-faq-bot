@@ -24,6 +24,7 @@ _db_ready: bool = False
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _db_ready
+    app.state.db_ready = False
 
     # Startup (best-effort)
     attempts = 3
@@ -33,11 +34,13 @@ async def lifespan(app: FastAPI):
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
             _db_ready = True
+            app.state.db_ready = True
             last_err = None
             break
         except Exception as e:
             last_err = str(e)
             _db_ready = False
+            app.state.db_ready = False
 
             # brief backoff, bounded
             if i < attempts - 1:
@@ -47,6 +50,9 @@ async def lifespan(app: FastAPI):
 
     if not _db_ready:
         log_event(event="db_startup_unavailable", severity="high", attempts=attempts, error=last_err)
+
+    # Expose readiness to dependencies
+    app.state.db_ready = bool(_db_ready)
 
     yield
 
