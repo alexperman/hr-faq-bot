@@ -21,7 +21,7 @@ def run_kb_assist(args: argparse.Namespace) -> None:
         ],
     }
 
-    out = memory_root() / "product" / f"kb_assist_{datetime.utcnow().date().isoformat()}.json"
+    out = memory_root() / "product_recommendations" / f"kb_assist_{datetime.utcnow().date().isoformat()}.json"
     write_json(out, payload)
     if not getattr(args, "dry_run", False):
         print(f"[kb-agent] wrote {out}")

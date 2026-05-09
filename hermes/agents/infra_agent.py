@@ -12,6 +12,7 @@ from hermes.tools.replyiq_admin import (
     paypal_status,
 )
 from hermes.tools.storage import write_json, utc_now_iso
+from hermes.tools.telegram import post_message
 
 
 INCIDENT_SCHEMA_KEYS = ["incident", "severity", "cause", "fix", "timestamp"]
@@ -26,10 +27,24 @@ def _write_incident(incident: dict) -> None:
     out = {k: incident.get(k, "") for k in INCIDENT_SCHEMA_KEYS}
     out["timestamp"] = incident.get("timestamp") or _now_iso()
 
-    incidents_dir = memory_root() / "incidents"
+    incidents_dir = memory_root() / "deployment_incidents"
     ts = datetime.now(timezone.utc).isoformat().replace(":", "-")
     path = incidents_dir / f"incident_{ts}.json"
     write_json(path, out)
+
+    inc_text = (out.get("incident") or "").lower()
+    if "paypal" in inc_text or "webhook" in inc_text:
+        failed_dir = memory_root() / "failed_webhooks"
+        failed_dir.mkdir(parents=True, exist_ok=True)
+        failed_path = failed_dir / f"failed_webhook_{ts}.json"
+        write_json(failed_path, out)
+
+    severity = (out.get("severity") or "").strip().lower()
+    channel = "TELEGRAM_CHAT_CRITICAL" if severity in ("critical", "high") else "TELEGRAM_CHAT_INFRA"
+    post_message(
+        channel,
+        f"{out.get('incident','Infrastructure incident')} | severity={out.get('severity','')} | {out.get('timestamp','')}",
+    )
 
 
 def _severity_from_flags(flags: dict) -> str | None:
@@ -224,8 +239,8 @@ def run_infra_deploy_verification(args: argparse.Namespace) -> None:
 def run_infra_incident_summarization(args: argparse.Namespace) -> None:
     load_env()
 
-    incidents_dir = memory_root() / "incidents"
-    summaries_dir = memory_root() / "summaries"
+    incidents_dir = memory_root() / "deployment_incidents"
+    summaries_dir = memory_root() / "daily_summaries"
 
     now = datetime.now(timezone.utc)
     cutoff = now.timestamp() - 3600
@@ -258,6 +273,11 @@ def run_infra_incident_summarization(args: argparse.Namespace) -> None:
 
     out_path = summaries_dir / f"infra_incidents_{now.date().isoformat()}_{now.hour:02d}.json"
     write_json(out_path, summary)
+
+    post_message(
+        "TELEGRAM_CHAT_INFRA",
+        f"🏗️ Infra incident summary ({now.date().isoformat()} hour {now.hour:02d}), count={len(recent)}",
+    )
 
     if not getattr(args, "dry_run", False):
         print(f"[infra-agent-summarize] wrote {out_path}")

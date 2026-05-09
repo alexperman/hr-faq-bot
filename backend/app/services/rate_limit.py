@@ -7,6 +7,8 @@ import time
 from collections import defaultdict
 from fastapi import HTTPException, status
 
+from app.services.structured_logger import log_event
+
 # sliding window: user_id -> list of request timestamps
 _request_windows: dict[int, list[float]] = defaultdict(list)
 
@@ -51,6 +53,13 @@ def check_rate_limit(user_id: int) -> None:
         # trim
         if len(_exceeded_events) > _MAX_EVENT_HISTORY:
             del _exceeded_events[:-_MAX_EVENT_HISTORY]
+
+        log_event(
+            event="rate_limit_anomaly",
+            severity="medium",
+            user_id=user_id,
+            retry_after_s=retry_after,
+        )
 
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

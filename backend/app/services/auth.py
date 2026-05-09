@@ -9,6 +9,7 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.database import get_db
 from app.models import User
+from app.services.structured_logger import log_event
 
 settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -24,6 +25,9 @@ def _record_auth_failure(reason: str) -> None:
     _auth_failure_events.append({"reason": reason})
     if len(_auth_failure_events) > _AUTH_FAILURE_EVENT_HISTORY:
         del _auth_failure_events[: -_AUTH_FAILURE_EVENT_HISTORY]
+
+    # Keep log records concise and non-sensitive.
+    log_event(event="auth_failure", severity="medium", reason=reason)
 
 
 def get_auth_failure_stats() -> dict:

@@ -7,12 +7,13 @@ from pathlib import Path
 from hermes.tools.paths import memory_root
 from hermes.tools.storage import write_json, utc_now_iso
 from hermes.tools.env import load_env
+from hermes.tools.telegram import post_message
 
 
-INCIDENT_DIR = "incidents"
+INCIDENT_DIR = "deployment_incidents"
 DEPLOYMENT_DIR = "deployments"
-GROWTH_DIR = "growth"
-SUMMARIES_DIR = "summaries"
+GROWTH_DIR = "growth_experiments"
+SUMMARIES_DIR = "daily_summaries"
 
 
 @dataclass
@@ -204,6 +205,20 @@ def run_memory_maintenance(args: argparse.Namespace) -> None:
 
     out_path = summaries_dir / f"memory_agent_daily_{now.date().isoformat()}.json"
     write_json(out_path, summary)
+
+    post_message(
+        "TELEGRAM_CHAT_MEMORY",
+        f"🧠 Daily ops summary ({now.date().isoformat()}), incidents={len(recent)}, fixes={len(successful_fixes)}",
+    )
+
+    # Persist successful fixes into required memory domain.
+    try:
+        fixes_dir = memory_root() / "successful_fixes"
+        fixes_dir.mkdir(parents=True, exist_ok=True)
+        fixes_path = fixes_dir / f"successful_fixes_{now.date().isoformat()}.json"
+        write_json(fixes_path, {"window": "last_24h", "successful_fixes": successful_fixes})
+    except Exception:
+        pass
 
     # Keep stdout quiet unless explicitly requested.
     if not getattr(args, "dry_run", False):

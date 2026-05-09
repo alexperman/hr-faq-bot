@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from app.services.structured_logger import log_event
 
 # In-memory KB ingestion failure tracking (safe: no document content)
 _kb_failure_events: list[dict] = []
@@ -9,6 +9,7 @@ _KB_FAILURE_HISTORY = 200
 
 def record_kb_failure(*, tenant_slug: str | None, reason: str) -> None:
     _kb_failure_events.append({"tenant_slug": tenant_slug, "reason": reason})
+    log_event(event="kb_ingestion_failure", severity="medium", tenant=tenant_slug, reason=reason)
     if len(_kb_failure_events) > _KB_FAILURE_HISTORY:
         del _kb_failure_events[: -_KB_FAILURE_HISTORY]
 

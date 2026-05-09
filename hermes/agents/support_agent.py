@@ -18,7 +18,7 @@ def run_support(args: argparse.Namespace) -> None:
         "note": "Wire to ReplyIQ admin endpoints when available.",
     }
 
-    out = memory_root() / "summaries" / f"support_{datetime.utcnow().date().isoformat()}.json"
+    out = memory_root() / "daily_summaries" / f"support_{datetime.utcnow().date().isoformat()}.json"
     write_json(out, payload)
     if not getattr(args, "dry_run", False):
         print(f"[support-agent] wrote {out}")

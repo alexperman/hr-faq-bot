@@ -6,6 +6,7 @@ from pathlib import Path
 from hermes.tools.env import load_env
 from hermes.tools.paths import memory_root
 from hermes.tools.storage import write_json, utc_now_iso
+from hermes.tools.telegram import post_message
 
 
 LANGS = ["en", "es", "de"]
@@ -246,7 +247,7 @@ def run_outreach_generation(args: argparse.Namespace) -> None:
     }
 
     root = memory_root()
-    out = root / "growth" / f"growth_drafts_{datetime.now().date().isoformat()}.json"
+    out = root / "growth_experiments" / f"growth_drafts_{datetime.now().date().isoformat()}.json"
     write_json(out, payload)
 
     summary = {
@@ -267,8 +268,13 @@ def run_outreach_generation(args: argparse.Namespace) -> None:
         ],
     }
 
-    sums = root / "summaries" / f"growth_agent_daily_{datetime.now().date().isoformat()}.json"
+    sums = root / "daily_summaries" / f"growth_agent_daily_{datetime.now().date().isoformat()}.json"
     write_json(sums, summary)
+
+    post_message(
+        "TELEGRAM_CHAT_GROWTH",
+        f"📣 Daily growth drafts ready ({datetime.now(timezone.utc).date().isoformat()}), languages=EN/ES/DE",
+    )
 
     if not getattr(args, "dry_run", False):
         print(f"[growth-agent] wrote {out} and {sums}")

@@ -4,14 +4,15 @@ from datetime import datetime, timezone
 from hermes.tools.env import load_env
 from hermes.tools.paths import memory_root
 from hermes.tools.storage import write_json, utc_now_iso
+from hermes.tools.telegram import post_message
 
 
 def run_product_recommendations(args: argparse.Namespace) -> None:
     load_env()
 
     root = memory_root()
-    summaries_dir = root / "summaries"
-    product_dir = root / "product"
+    summaries_dir = root / "daily_summaries"
+    product_dir = root / "product_recommendations"
 
     product_dir.mkdir(parents=True, exist_ok=True)
     summaries_dir.mkdir(parents=True, exist_ok=True)
@@ -85,8 +86,13 @@ def run_product_recommendations(args: argparse.Namespace) -> None:
         "recommendations_written": recs[:3],
         "draft_file": str(path),
     }
-    summary_path = root / "summaries" / f"product_agent_summary_{datetime.now(timezone.utc).date().isoformat()}.json"
+    summary_path = root / "daily_summaries" / f"product_agent_summary_{datetime.now(timezone.utc).date().isoformat()}.json"
     write_json(summary_path, summary)
+
+    post_message(
+        "TELEGRAM_CHAT_PRODUCT",
+        f"🧩 Daily product recommendations ready ({datetime.now(timezone.utc).date().isoformat()}), count={len(recs[:3])}",
+    )
 
     if not getattr(args, "dry_run", False):
         print(f"[product-agent] wrote {path}")

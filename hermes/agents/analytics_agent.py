@@ -20,7 +20,7 @@ def run_analytics(args: argparse.Namespace) -> None:
         ],
     }
 
-    out = memory_root() / "summaries" / f"analytics_{datetime.utcnow().date().isoformat()}.json"
+    out = memory_root() / "daily_summaries" / f"analytics_{datetime.utcnow().date().isoformat()}.json"
     write_json(out, payload)
     if not getattr(args, "dry_run", False):
         print(f"[analytics-agent] wrote {out}")

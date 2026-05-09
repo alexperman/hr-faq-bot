@@ -1,9 +1,14 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi import HTTPException
 from pathlib import Path
+from datetime import datetime, timezone
+
+from app.services.structured_logger import log_event
 
 from app.config import get_settings
 from app.database import engine, Base
@@ -40,6 +45,46 @@ app.include_router(kb.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
 app.include_router(admin.router)
+
+
+# ─── Structured error responses ─────────────────────────────────────────
+
+@app.exception_handler(HTTPException)
+async def structured_http_exception_handler(request: Request, exc: HTTPException):
+    log_event(
+        event="http_exception",
+        severity="medium" if exc.status_code < 500 else "high",
+        path=request.url.path,
+        status_code=exc.status_code,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": "http_error",
+                "message": exc.detail,
+                "status": exc.status_code,
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def structured_validation_exception_handler(request: Request, exc: RequestValidationError):
+    log_event(event="validation_error", severity="medium", path=request.url.path)
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "validation_error",
+                "message": "Request validation failed",
+                "details": exc.errors(),
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent          # → backend/

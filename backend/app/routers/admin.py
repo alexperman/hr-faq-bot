@@ -11,7 +11,7 @@ from app.models import WebhookEvent, Subscription, Tenant, Document
 from app.services.rate_limit import get_rate_limit_stats
 from app.services.auth import get_auth_failure_stats
 from app.services.kb_monitor import get_kb_failure_stats
-from sqlalchemy import exists
+from app.services.structured_logger import log_audit
 settings = get_settings()
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -332,4 +332,83 @@ async def paypal_status(
         },
         "webhook_received_last_24h": webhook_received_last_24h,
         "webhook_processing_ok": last_verified,
+    }
+
+
+@router.get("/tenants/summary")
+async def tenants_summary(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tenant-level readiness summary (aggregates only, no tenant-specific data)."""
+
+    tenants_total = (await db.execute(select(func.count()).select_from(Tenant))).scalar_one()
+    active_tenants = (await db.execute(select(func.count()).select_from(Tenant).where(Tenant.is_active == True))).scalar_one()  # noqa: E712
+
+    active_subs = (
+        await db.execute(
+            select(func.count()).select_from(Subscription).where(Subscription.status == "active")
+        )
+    ).scalar_one()
+
+    active_tenant_ids = (
+        select(Subscription.tenant_id)
+        .where(Subscription.status == "active")
+        .subquery()
+    )
+
+    active_tenants_with_docs = (
+        await db.execute(
+            select(func.count(func.distinct(Document.tenant_id))).where(
+                Document.tenant_id.in_(active_tenant_ids)
+            )
+        )
+    ).scalar_one()
+
+    active_tenants_empty_kb = int(active_subs - active_tenants_with_docs)
+
+    cutoff_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    stale_tenant_ids_subq = (
+        select(Document.tenant_id)
+        .where(Document.tenant_id.in_(active_tenant_ids))
+        .group_by(Document.tenant_id)
+        .having(func.max(Document.updated_at) < cutoff_7d)
+        .subquery()
+    )
+    active_tenants_stale_kb_over_7d = (
+        await db.execute(select(func.count()).select_from(stale_tenant_ids_subq))
+    ).scalar_one()
+
+    kb_ingest = get_kb_failure_stats()
+
+    return {
+        "tenants_total": tenants_total,
+        "active_tenants": active_tenants,
+        "active_subscriptions": active_subs,
+        "active_tenants_empty_kb": active_tenants_empty_kb,
+        "active_tenants_stale_kb_over_7d": active_tenants_stale_kb_over_7d,
+        "kb_ingest_failures_recent": kb_ingest.get("failures_total_recent"),
+    }
+
+
+@router.post("/kb/reindex")
+async def kb_reindex(
+    _: None = Depends(require_admin),
+    approval: str | None = Header(default=None, alias="X-Approval"),
+):
+    """Reindex KB (medium-risk, requires explicit approval).
+
+    For the current MVP, retrieval uses keyword search, so this endpoint is a safe
+    no-op while still providing the operational hook and audit logging.
+    """
+
+    if approval != "true":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Approval required")
+
+    # Audit log only (no secrets, no tenant data)
+    log_audit(action="kb_reindex", approval=approval)
+
+    return {
+        "status": "noop",
+        "reason": "keyword_search_only_currently_no_index_to_rebuild",
     }

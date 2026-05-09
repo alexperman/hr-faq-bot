@@ -13,6 +13,7 @@ from app.services.paypal import (
     verify_webhook_signature,
 )
 from app.config import get_settings
+from app.services.structured_logger import log_event
 import hashlib
 import json
 
@@ -290,6 +291,12 @@ async def handle_paypal_webhook(
         await db.rollback()
 
     if not verified:
+        log_event(
+            event="paypal_webhook_failure",
+            severity="high",
+            event_type=event_type,
+            verification_status=verification_status,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid PayPal webhook signature",

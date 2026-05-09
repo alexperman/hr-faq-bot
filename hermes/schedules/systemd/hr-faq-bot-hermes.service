@@ -1,0 +1,18 @@
+[Unit]
+Description=ReplyIQ Hermes runtime (APScheduler)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/hr-faq-bot
+Environment=PYTHONPATH=/root/hr-faq-bot
+EnvironmentFile=/root/hr-faq-bot/hermes/.env
+ExecStart=/usr/bin/env python3 -m hermes.runtime.scheduler
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

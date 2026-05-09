@@ -1,5 +1,6 @@
 import httpx
 from app.config import get_settings
+from app.services.structured_logger import log_event
 
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -20,7 +21,8 @@ async def ask_groq(question: str, context_docs: list[str]) -> str:
     settings = get_settings()
 
     if not settings.GROQ_API_KEY:
-        return "AI not configured. Set GROQ_API_KEY environment variable."
+        log_event(event="ai_provider_failure", severity="high", provider="groq", reason="missing_api_key")
+        return "AI not configured. Set GROQ_API_KEY environment variable." 
 
     context_text = "\n\n".join(context_docs) if context_docs else "No relevant context provided."
 
@@ -54,6 +56,19 @@ async def ask_groq(question: str, context_docs: list[str]) -> str:
             data = response.json()
             return data["choices"][0]["message"]["content"]
     except httpx.HTTPStatusError as e:
-        return f"Groq API error: {e.response.status_code} - {e.response.text}"
+        log_event(
+            event="ai_provider_failure",
+            severity="high",
+            provider="groq",
+            reason="http_status_error",
+            status_code=e.response.status_code,
+        )
+        return f"Groq API error: {e.response.status_code}"
     except Exception as e:
-        return f"Groq request failed: {str(e)}"
+        log_event(
+            event="ai_provider_failure",
+            severity="high",
+            provider="groq",
+            reason="request_failed",
+        )
+        return "Groq request failed."
