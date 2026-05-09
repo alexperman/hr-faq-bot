@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Hermes analytics-agent weekly
+
+[Timer]
+OnBootSec=15min
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -17,10 +17,15 @@ class Settings(BaseSettings):
     # Groq AI
     GROQ_API_KEY: str = ""
 
+    # Admin
+    ADMIN_API_KEY: str = ""
+
     # PayPal
     PAYPAL_CLIENT_ID: str = ""
     PAYPAL_CLIENT_SECRET: str = ""
     PAYPAL_MODE: str = "sandbox"  # or "live"
+    PAYPAL_WEBHOOK_ID: str = ""
+
 
     # App
     APP_URL: str = "http://localhost:8000"

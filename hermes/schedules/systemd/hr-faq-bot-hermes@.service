@@ -1,0 +1,11 @@
+[Unit]
+Description=ReplyIQ Hermes (%i)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/hr-faq-bot
+Environment=PYTHONPATH=/root/hr-faq-bot
+EnvironmentFile=/root/hr-faq-bot/hermes/.env
+ExecStart=/usr/bin/env python3 -m hermes.cli %i
+StandardOutput=journal
+StandardError=journal

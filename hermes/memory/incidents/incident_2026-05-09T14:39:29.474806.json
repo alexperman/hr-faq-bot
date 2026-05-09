@@ -1,0 +1,9 @@
+{
+  "type": "incident",
+  "at": "2026-05-09T14:39:29.474714+00:00",
+  "service": "render",
+  "summary": "Render/ReplyIQ admin health check failed",
+  "context": {
+    "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /admin/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7877f69031d0>: Failed to establish a new connection: [Errno 111] Connection refused'))"
+  }
+}

@@ -5,10 +5,16 @@ from sqlalchemy import select
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import User, Tenant, Subscription
+from app.models import User, Tenant, Subscription, WebhookEvent
 from app.services.auth import get_current_user
-from app.services.paypal import create_subscription as paypal_create_subscription, cancel_subscription as paypal_cancel_subscription
+from app.services.paypal import (
+    create_subscription as paypal_create_subscription,
+    cancel_subscription as paypal_cancel_subscription,
+    verify_webhook_signature,
+)
 from app.config import get_settings
+import hashlib
+import json
 
 settings = get_settings()
 router = APIRouter(prefix="/{tenant}/billing", tags=["billing"])
@@ -201,14 +207,95 @@ async def handle_paypal_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """Handle PayPal webhooks for subscription events.
+
+    If `PAYPAL_WEBHOOK_ID` is configured, we verify webhook signatures using
+    PayPal's Notifications API. Otherwise (e.g. tests), we accept the payload.
     """
-    Handle PayPal webhooks for subscription events.
-    No authentication required - PayPal verifies via webhook signature.
-    """
+
     body = await request.json()
     event_type = body.get("event_type")
     resource = body.get("resource", {})
 
+    # Store lightweight webhook event memory
+    payload_sha = hashlib.sha256(
+        json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+    paypal_event_id = body.get("id")
+
+    verified = True
+    verification_status: str | None = None
+    verification_detail: str | None = None
+
+    # Pull PayPal signature headers (Starlette stores headers in lowercase keys)
+    headers = request.headers
+    transmission_id = headers.get("paypal-transmission-id")
+    transmission_time = headers.get("paypal-transmission-time")
+    cert_url = headers.get("paypal-cert-url")
+    auth_algo = headers.get("paypal-auth-algo")
+
+    if settings.PAYPAL_WEBHOOK_ID:
+        # Strict verification when webhook id is configured.
+        missing = [
+            name
+            for name, v in [
+                ("paypal-transmission-id", transmission_id),
+                ("paypal-transmission-time", transmission_time),
+                ("paypal-cert-url", cert_url),
+                ("paypal-auth-algo", auth_algo),
+            ]
+            if not v
+        ]
+
+        if missing:
+            verified = False
+            verification_status = "MISSING_HEADERS"
+            verification_detail = f"Missing required PayPal headers: {missing}"
+        else:
+            try:
+                result = await verify_webhook_signature(
+                    transmission_id=transmission_id,
+                    transmission_time=transmission_time,
+                    cert_url=cert_url,
+                    auth_algo=auth_algo,
+                    webhook_event=body,
+                )
+                verification_status = result.get("verification_status")
+                # PayPal uses SUCCESS / FAILURE
+                verified = (verification_status == "SUCCESS")
+                verification_detail = result.get("message")
+            except Exception as e:
+                verified = False
+                verification_status = "VERIFICATION_ERROR"
+                verification_detail = str(e)
+    else:
+        verification_status = "SKIPPED_NO_WEBHOOK_ID"
+        verified = True
+
+    # Persist webhook event record (never destructive)
+    try:
+        db_event = WebhookEvent(
+            paypal_event_id=paypal_event_id,
+            event_type=event_type,
+            verification_status=verification_status,
+            verified=verified,
+            verification_detail=verification_detail,
+            payload_sha256=payload_sha,
+        )
+        db.add(db_event)
+        await db.commit()
+    except Exception:
+        # Don't fail the webhook due to logging issues.
+        await db.rollback()
+
+    if not verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid PayPal webhook signature",
+        )
+
+    # Update local subscription state
     if event_type == "BILLING.SUBSCRIPTION.ACTIVATED":
         subscription_id = resource.get("id")
         if subscription_id:

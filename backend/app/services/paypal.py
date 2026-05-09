@@ -5,7 +5,13 @@ from app.config import get_settings
 
 PAYPAL_API: str = ""
 
-__all__ = ["get_paypal_access_token", "create_subscription", "get_subscription_status", "cancel_subscription"]
+__all__ = [
+    "get_paypal_access_token",
+    "create_subscription",
+    "get_subscription_status",
+    "cancel_subscription",
+    "verify_webhook_signature",
+]
 
 
 def _get_base_url() -> str:
@@ -99,7 +105,7 @@ async def cancel_subscription(subscription_id: str) -> bool:
     """Cancel a PayPal subscription."""
     token = await get_paypal_access_token()
     client = await _get_client()
-    
+
     response = await client.post(
         f"/v1/billing/subscriptions/{subscription_id}/cancel",
         headers={
@@ -108,8 +114,48 @@ async def cancel_subscription(subscription_id: str) -> bool:
         },
         json={"reason": "User requested cancellation"},
     )
-    
+
     if response.status_code == 204:
         return True
     response.raise_for_status()
     return True
+
+
+async def verify_webhook_signature(
+    *,
+    transmission_id: str,
+    transmission_time: str,
+    cert_url: str,
+    auth_algo: str,
+    webhook_event: dict,
+) -> dict:
+    """Verify a PayPal webhook using the Notifications API.
+
+    Returns the raw PayPal response JSON.
+    Requires `PAYPAL_WEBHOOK_ID` in settings.
+    """
+    settings = get_settings()
+    if not settings.PAYPAL_WEBHOOK_ID:
+        raise RuntimeError("PAYPAL_WEBHOOK_ID not configured")
+
+    token = await get_paypal_access_token()
+    client = await _get_client()
+
+    response = await client.post(
+        "/v1/notifications/verify-webhook-signature",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "transmission_id": transmission_id,
+            "transmission_time": transmission_time,
+            "cert_url": cert_url,
+            "auth_algo": auth_algo,
+            "webhook_id": settings.PAYPAL_WEBHOOK_ID,
+            "webhook_event": webhook_event,
+        },
+    )
+
+    response.raise_for_status()
+    return response.json()

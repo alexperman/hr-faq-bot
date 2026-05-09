@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Hermes memory-agent daily
+
+[Timer]
+OnBootSec=5min
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

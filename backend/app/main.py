@@ -8,6 +8,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.database import engine, Base
 from app.routers import auth, kb, chat, billing
+from app.routers import admin
 
 settings = get_settings()
 
@@ -38,6 +39,7 @@ app.include_router(auth.router)
 app.include_router(kb.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
+app.include_router(admin.router)
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent          # → backend/
