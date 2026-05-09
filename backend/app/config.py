@@ -1,10 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/alterzahen"
+    _DEFAULT_DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/alterzahen"
+    DATABASE_URL: str = _DEFAULT_DATABASE_URL
     ALLOWED_ORIGINS: str = "*"  # Comma-separated list in production
 
     # JWT
@@ -28,6 +30,28 @@ class Settings(BaseSettings):
     PRICE_ID_STARTER: str = ""
     PRICE_ID_GROWTH: str = ""
     PRICE_ID_ENTERPRISE: str = ""
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, v: str | None) -> str:
+        if v is None:
+            return cls._DEFAULT_DATABASE_URL
+        if isinstance(v, str):
+            v = v.strip()
+        if not v:
+            return cls._DEFAULT_DATABASE_URL
+
+        # Render Postgres commonly provides postgresql://...; convert to async driver.
+        if v.startswith("postgres://"):
+            return "postgresql+asyncpg://" + v[len("postgres://"):]
+        if v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v[len("postgresql://"):]
+
+        # Basic guardrail for clearly invalid values.
+        if "://" not in v:
+            raise ValueError("DATABASE_URL must include a scheme, e.g. postgresql+asyncpg://user:pass@host:5432/db")
+
+        return v
 
     model_config = SettingsConfigDict(env_file=".env")
 
