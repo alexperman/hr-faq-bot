@@ -62,8 +62,17 @@ class Settings(BaseSettings):
             if parts.query:
                 q = dict(parse_qsl(parts.query, keep_blank_values=True))
                 if "sslmode" in q:
-                    q.pop("sslmode", None)
-                    q.setdefault("ssl", "true")
+                    # asyncpg parses the `ssl` parameter as a Postgres `sslmode` string.
+                    # So convert: sslmode=require -> ssl=require
+                    sslmode_val = q.pop("sslmode", None)
+                    if sslmode_val:
+                        q["ssl"] = sslmode_val
+                    else:
+                        q.pop("ssl", None)
+                # If a prior attempt set ssl=true, correct it by removing.
+                if q.get("ssl") == "true":
+                    q.pop("ssl", None)
+
                 # rebuild query
                 query = urlencode(q)
                 v = urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
