@@ -9,7 +9,9 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import WebhookEvent, Subscription, Tenant, Document
 from app.services.rate_limit import get_rate_limit_stats
-
+from app.services.auth import get_auth_failure_stats
+from app.services.kb_monitor import get_kb_failure_stats
+from sqlalchemy import exists
 settings = get_settings()
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -78,14 +80,47 @@ async def system_health(
         )
     ).scalar_one()
 
+    # Tenant health aggregates (active tenants with empty/stale KB)
+    active_tenant_ids = (
+        select(Subscription.tenant_id)
+        .where(Subscription.status == "active")
+        .subquery()
+    )
+
+    active_tenants_with_docs = (
+        await db.execute(
+            select(func.count(func.distinct(Document.tenant_id))).where(
+                Document.tenant_id.in_(active_tenant_ids)
+            )
+        )
+    ).scalar_one()
+
+    active_tenants_empty_kb = int(active_subs - active_tenants_with_docs)
+
+    cutoff_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    stale_tenant_ids_subq = (
+        select(Document.tenant_id)
+        .where(Document.tenant_id.in_(active_tenant_ids))
+        .group_by(Document.tenant_id)
+        .having(func.max(Document.updated_at) < cutoff_7d)
+        .subquery()
+    )
+    active_tenants_stale_kb_over_7d = (
+        await db.execute(select(func.count()).select_from(stale_tenant_ids_subq))
+    ).scalar_one()
+
     kb_warning = None
     if active_subs > 0 and docs_total == 0:
         kb_warning = "Active tenants exist but documents corpus is empty"
+
+    auth_stats = get_auth_failure_stats()
+    kb_ingest_stats = get_kb_failure_stats()
 
     return {
         "ok": db_ok,
         "db": {"ok": db_ok},
         "api": {"ok": True, "start_time": APP_START_TIME.isoformat()},
+        "auth": auth_stats,
         "rate_limit": {
             "exceeded_last_60s": rl.get("exceeded_last_60s"),
             "exceeded_last_24h": rl.get("exceeded_last_24h"),
@@ -94,6 +129,12 @@ async def system_health(
             "docs_total": docs_total,
             "docs_last_updated_at": docs_last_updated_iso,
             "warning": kb_warning,
+        },
+        "kb_ingest": kb_ingest_stats,
+        "tenants": {
+            "active_subscriptions": active_subs,
+            "active_tenants_empty_kb": active_tenants_empty_kb,
+            "active_tenants_stale_kb_over_7d": active_tenants_stale_kb_over_7d,
         },
         "paypal": {
             "latest_webhook_verified": paypal_ok,
@@ -170,17 +211,61 @@ async def system_stats(
         )
     ).scalar_one()
 
+    auth_stats = get_auth_failure_stats()
+    kb_ingest_stats = get_kb_failure_stats()
+
+    active_subs = (
+        await db.execute(
+            select(func.count()).select_from(Subscription).where(Subscription.status == "active")
+        )
+    ).scalar_one()
+
+    active_tenant_ids = (
+        select(Subscription.tenant_id)
+        .where(Subscription.status == "active")
+        .subquery()
+    )
+
+    active_tenants_with_docs = (
+        await db.execute(
+            select(func.count(func.distinct(Document.tenant_id))).where(
+                Document.tenant_id.in_(active_tenant_ids)
+            )
+        )
+    ).scalar_one()
+
+    active_tenants_empty_kb = int(active_subs - active_tenants_with_docs)
+
+    cutoff_7d = datetime.now(timezone.utc) - timedelta(days=7)
+    stale_tenant_ids_subq = (
+        select(Document.tenant_id)
+        .where(Document.tenant_id.in_(active_tenant_ids))
+        .group_by(Document.tenant_id)
+        .having(func.max(Document.updated_at) < cutoff_7d)
+        .subquery()
+    )
+    active_tenants_stale_kb_over_7d = (
+        await db.execute(select(func.count()).select_from(stale_tenant_ids_subq))
+    ).scalar_one()
+
     return {
         "tenants_total": tenants_total,
         "subscriptions_by_status": [
             {"status": s, "count": c} for (s, c) in subs_by_status_rows
         ],
+        "tenants": {
+            "active_subscriptions": active_subs,
+            "active_tenants_empty_kb": active_tenants_empty_kb,
+            "active_tenants_stale_kb_over_7d": active_tenants_stale_kb_over_7d,
+        },
         "documents_total": docs_total,
         "documents_last_updated_at": docs_last_updated_at.isoformat() if docs_last_updated_at else None,
         "rate_limit": {
             "exceeded_last_60s": rl.get("exceeded_last_60s"),
             "exceeded_last_24h": rl.get("exceeded_last_24h"),
         },
+        "auth": auth_stats,
+        "kb_ingest": kb_ingest_stats,
         "paypal": {
             "latest_webhook_verified": bool(latest and latest.verified),
             "latest_webhook_event_type": latest.event_type if latest else None,

@@ -14,6 +14,32 @@ settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
+# In-memory auth failure tracking (safe; no PII/tokens)
+_auth_failure_events: list[dict] = []
+_AUTH_FAILURE_EVENT_HISTORY = 200
+
+
+def _record_auth_failure(reason: str) -> None:
+    """Record an auth failure event (no secrets)."""
+    _auth_failure_events.append({"reason": reason})
+    if len(_auth_failure_events) > _AUTH_FAILURE_EVENT_HISTORY:
+        del _auth_failure_events[: -_AUTH_FAILURE_EVENT_HISTORY]
+
+
+def get_auth_failure_stats() -> dict:
+    """Aggregate auth failures over short windows."""
+    # We only record reason; timestamps are not stored to keep it minimal.
+    # Since hermes calls admin endpoints periodically, the counters reflect recent activity.
+    counts: dict[str, int] = {}
+    for ev in _auth_failure_events[-_AUTH_FAILURE_EVENT_HISTORY:]:
+        r = (ev.get("reason") or "unknown").strip()
+        counts[r] = counts.get(r, 0) + 1
+    return {
+        "failures_total_recent": len(_auth_failure_events),
+        "failures_by_reason_recent": counts,
+        "recent_failures": _auth_failure_events[-10:],
+    }
+
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
@@ -41,12 +67,18 @@ async def get_current_user(
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: int = payload.get("user_id")
         if user_id is None:
+            _record_auth_failure("missing_user_id")
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
+        _record_auth_failure("invalid_token")
         raise HTTPException(status_code=401, detail="Invalid token")
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
+    if user is None:
+        _record_auth_failure("user_not_found")
+        raise HTTPException(status_code=401, detail="User not found")
+    if not user.is_active:
+        _record_auth_failure("user_inactive")
         raise HTTPException(status_code=401, detail="User not found")
     return user

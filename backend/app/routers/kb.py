@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator
 from app.database import get_db
 from app.models import Document, User, Tenant, Subscription
 from app.services.auth import get_current_user
+from app.services.kb_monitor import record_kb_failure
 
 router = APIRouter(prefix="/{tenant}/kb", tags=["kb"])
 
@@ -104,16 +105,21 @@ async def create_document(
             detail="Subscription required (activate your plan to add HR documents).",
         )
 
-    document = Document(
-        title=data.title,
-        content=data.content,
-        source_url=data.source_url,
-        char_count=len(data.content),
-        tenant_id=db_tenant.id,
-    )
-    db.add(document)
-    await db.commit()
-    await db.refresh(document)
+    try:
+        document = Document(
+            title=data.title,
+            content=data.content,
+            source_url=data.source_url,
+            char_count=len(data.content),
+            tenant_id=db_tenant.id,
+        )
+        db.add(document)
+        await db.commit()
+        await db.refresh(document)
+    except Exception as e:
+        record_kb_failure(tenant_slug=tenant, reason=e.__class__.__name__)
+        raise
+
     return DocumentOut(
         id=document.id,
         title=document.title,

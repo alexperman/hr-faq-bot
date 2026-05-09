@@ -37,9 +37,15 @@ def _severity_from_flags(flags: dict) -> str | None:
         return "critical"
     if flags.get("paypal_ok") is False:
         return "high"
-    if flags.get("rate_limit_anomaly"):
+
+    if (
+        flags.get("auth_anomaly")
+        or flags.get("kb_ingest_anomaly")
+        or flags.get("tenants_empty_kb")
+    ):
         return "medium"
-    if flags.get("kb_corpus_empty"):
+
+    if flags.get("rate_limit_anomaly"):
         return "medium"
     if flags.get("kb_stale"):
         return "low"
@@ -63,7 +69,17 @@ def run_infra_health_check(args: argparse.Namespace) -> None:
     docs_total = int(health.get("kb", {}).get("docs_total") or 0)
     kb_warning = health.get("kb", {}).get("warning")
 
-    kb_corpus_empty = bool(docs_total == 0 and stats.get("tenants_total") is not None)
+    tenants = health.get("tenants", {}) or {}
+    tenants_empty_kb = int(tenants.get("active_tenants_empty_kb") or 0)
+    tenants_stale_kb = int(tenants.get("active_tenants_stale_kb_over_7d") or 0)
+
+    auth_failures_total = int((health.get("auth", {}) or {}).get("failures_total_recent") or 0)
+    kb_ingest_failures_total = int((health.get("kb_ingest", {}) or {}).get("failures_total_recent") or 0)
+
+    auth_anomaly = auth_failures_total >= 20
+    kb_ingest_anomaly = kb_ingest_failures_total >= 5
+
+    kb_corpus_empty = bool(tenants_empty_kb > 0 or docs_total == 0)
 
     kb_last_updated = health.get("kb", {}).get("docs_last_updated_at")
     kb_stale = False
@@ -74,12 +90,17 @@ def run_infra_health_check(args: argparse.Namespace) -> None:
         except Exception:
             kb_stale = False
 
+    kb_stale = bool(kb_stale or tenants_stale_kb > 0)
+
     flags = {
         "db_ok": db_ok,
         "paypal_ok": paypal_ok,
         "rate_limit_anomaly": rate_limit_anomaly,
-        "kb_corpus_empty": kb_warning is not None or (docs_total == 0),
+        "kb_corpus_empty": bool(kb_warning is not None or kb_corpus_empty),
         "kb_stale": kb_stale,
+        "auth_anomaly": auth_anomaly,
+        "kb_ingest_anomaly": kb_ingest_anomaly,
+        "tenants_empty_kb": tenants_empty_kb > 0,
     }
 
     severity = _severity_from_flags(flags)
@@ -99,6 +120,14 @@ def run_infra_health_check(args: argparse.Namespace) -> None:
             "severity": severity,
             "cause": "Latest webhook verification did not pass (or no successful verification observed).",
             "fix": "Verify PAYPAL_WEBHOOK_ID and PayPal webhook signature verification configuration; inspect last webhook verification attempts in admin logs.",
+            "timestamp": _now_iso(),
+        }
+    elif severity == "medium" and (flags.get("auth_anomaly") or flags.get("kb_ingest_anomaly")):
+        incident = {
+            "incident": "Auth failures and/or KB ingestion failures detected",
+            "severity": severity,
+            "cause": f"auth_failures_total_recent={auth_failures_total}, kb_ingest_failures_total_recent={kb_ingest_failures_total}",
+            "fix": "Inspect admin system logs for recent auth/kb ingestion failures; ensure client auth flow and KB document creation path work end-to-end.",
             "timestamp": _now_iso(),
         }
     elif severity == "medium" and rate_limit_anomaly:
