@@ -9,6 +9,7 @@ from hermes.agents.growth_agent import run_outreach_generation
 from hermes.agents.analytics_agent import run_analytics
 from hermes.agents.kb_agent import run_kb_assist
 from hermes.agents.support_agent import run_support
+from hermes.agents.product_agent import run_product_recommendations
 
 
 def main():
@@ -42,6 +43,9 @@ def main():
 
     sub_sup = sub.add_parser("support-agent")
     sub_sup.set_defaults(func=lambda args: run_support(args))
+
+    sub_prod = sub.add_parser("product-agent")
+    sub_prod.set_defaults(func=lambda args: run_product_recommendations(args))
 
     # Optional: select date/source
     parser.add_argument("--dry-run", action="store_true")

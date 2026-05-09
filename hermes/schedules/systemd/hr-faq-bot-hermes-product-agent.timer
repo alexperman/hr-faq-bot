@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Hermes product-agent daily
+
+[Timer]
+OnBootSec=20min
+OnCalendar=daily
+Persistent=true
+Unit=hr-faq-bot-hermes@product-agent.service
+
+[Install]
+WantedBy=timers.target
