@@ -381,7 +381,7 @@
           throw new Error(data.detail || 'Invalid email or password');
         }
 
-        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('jwt_token', data.access_token);
         localStorage.setItem('tenant_slug', data.tenant_slug);
 
         window.location.href = `/${data.tenant_slug}/dashboard`;
@@ -399,7 +399,12 @@
       const name = document.getElementById('registerName').value.trim();
       const email = document.getElementById('registerEmail').value.trim();
       const password = document.getElementById('registerPassword').value;
-      const tenant_slug = document.getElementById('registerTenant').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      const company_name = document.getElementById('registerTenant').value.trim();
+
+      if (!company_name) {
+        showError('Company name is required');
+        return;
+      }
 
       if (!name || !email || !password) {
         showError('Please fill in all fields');
@@ -419,7 +424,7 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ name, email, password, tenant_slug })
+          body: JSON.stringify({ full_name: name, email, password, company_name })
         });
 
         const data = await response.json();
@@ -428,7 +433,7 @@
           throw new Error(data.detail || 'Registration failed. Please try again.');
         }
 
-        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('jwt_token', data.access_token);
         localStorage.setItem('tenant_slug', data.tenant_slug);
 
         window.location.href = `/${data.tenant_slug}/dashboard`;

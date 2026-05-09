@@ -22,7 +22,12 @@ class Settings(BaseSettings):
 
     # App
     APP_URL: str = "http://localhost:8000"
-    PRICE_ID: str = "P-XXXXXXXXXXXXXXXX"  # PayPal product/plan ID
+    PRICE_ID: str = "P-XXXXXXXXXXXXXXXX"  # fallback PayPal product/plan ID
+
+    # Optional per-plan PayPal price IDs (used when set)
+    PRICE_ID_STARTER: str = ""
+    PRICE_ID_GROWTH: str = ""
+    PRICE_ID_ENTERPRISE: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 

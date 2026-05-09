@@ -37,7 +37,7 @@ async def get_paypal_access_token() -> str:
     return response.json()["access_token"]
 
 
-async def create_subscription(name: str, email: str, plan_id: str) -> dict:
+async def create_subscription(name: str, email: str, plan_id: str, *, return_url: str, cancel_url: str) -> dict:
     """
     Create a PayPal subscription.
     
@@ -60,8 +60,8 @@ async def create_subscription(name: str, email: str, plan_id: str) -> dict:
             },
             "application_context": {
                 "brand_name": "HR FAQ Bot",
-                "return_url": f"{get_settings().APP_URL}/subscription/success",
-                "cancel_url": f"{get_settings().APP_URL}/subscription/cancel",
+                "return_url": return_url,
+                "cancel_url": cancel_url,
             },
         },
     )

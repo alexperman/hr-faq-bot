@@ -54,9 +54,6 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
 
-    # Create pending subscription
-    subscription = Subscription(tenant_id=tenant.id, status="pending")
-    db.add(subscription)
 
     try:
         await db.commit()
@@ -65,7 +62,7 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=409, detail="Email already registered")
 
     token = create_access_token(data={"user_id": user.id, "tenant_slug": slug})
-    return Token(access_token=token)
+    return Token(access_token=token, tenant_slug=slug)
 
 
 @router.post("/invite", response_model=InviteResponse)
@@ -128,7 +125,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     tenant = tenant_result.scalar_one()
 
     token = create_access_token(data={"user_id": user.id, "tenant_slug": tenant.slug})
-    return Token(access_token=token)
+    return Token(access_token=token, tenant_slug=tenant.slug)
 
 
 @router.get("/me", response_model=UserOut)

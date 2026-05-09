@@ -237,7 +237,7 @@
     <header>
         <h1>HR Assistant</h1>
         <nav>
-            <a href="/manage" id="manage-link">Manage KB</a>
+            <a href="/default/dashboard" id="manage-link">Manage KB</a>
             <button id="logout-btn">Logout</button>
         </nav>
     </header>
@@ -260,11 +260,11 @@
         const logoutBtn = document.getElementById('logout-btn');
         const manageLink = document.getElementById('manage-link');
 
-        let jwt = localStorage.getItem('jwt');
-        let tenant = localStorage.getItem('tenant') || 'default';
+        let jwt = localStorage.getItem('jwt_token');
+        let tenant = localStorage.getItem('tenant_slug') || 'default';
 
         function updateManageLink() {
-            manageLink.href = `/${tenant}/manage`;
+            manageLink.href = `/${tenant}/dashboard`;
         }
 
         function checkAuth() {
@@ -334,13 +334,15 @@
 
                 if (response.status === 401) {
                     jwt = null;
-                    localStorage.removeItem('jwt');
+                    localStorage.removeItem('jwt_token');
                     checkAuth();
                     return;
                 }
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    let errDetail = '';
+                    try { errDetail = (await response.json()).detail || ''; } catch (e) {}
+                    throw new Error(errDetail || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -348,7 +350,7 @@
                 addMessage(data.answer, false, data.sources);
             } catch (err) {
                 hideTyping();
-                addMessage('Sorry, I encountered an error processing your request.', false);
+                addMessage(err?.message || 'Sorry, I encountered an error processing your request.', false);
             } finally {
                 questionInput.disabled = false;
                 askBtn.disabled = false;
@@ -366,7 +368,7 @@
                 const response = await fetch('/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ email: username, password })
                 });
 
                 if (!response.ok) {
@@ -377,9 +379,9 @@
 
                 const data = await response.json();
                 jwt = data.access_token;
-                tenant = data.tenant || 'default';
-                localStorage.setItem('jwt', jwt);
-                localStorage.setItem('tenant', tenant);
+                tenant = data.tenant_slug || 'default';
+                localStorage.setItem('jwt_token', jwt);
+                localStorage.setItem('tenant_slug', tenant);
                 checkAuth();
             } catch (err) {
                 loginError.textContent = 'Connection error';
@@ -388,7 +390,8 @@
 
         logoutBtn.addEventListener('click', () => {
             jwt = null;
-            localStorage.removeItem('jwt');
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('tenant_slug');
             chatHistory.innerHTML = '';
             checkAuth();
         });

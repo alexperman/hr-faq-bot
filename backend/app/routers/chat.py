@@ -4,7 +4,7 @@ from sqlalchemy import select
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import User, Document, Tenant
+from app.models import User, Document, Tenant, Subscription
 from app.services.auth import get_current_user
 from app.services.groq import ask_groq
 from app.services.rate_limit import check_rate_limit
@@ -87,7 +87,18 @@ async def ask_question(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this tenant",
         )
-    
+
+    sub_result = await db.execute(
+        select(Subscription).where(Subscription.tenant_id == db_tenant.id)
+    )
+    subscription = sub_result.scalar_one_or_none()
+
+    if subscription is None or subscription.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Subscription required (activate your plan to ask HR questions).",
+        )
+
     # Fetch documents for this tenant's knowledge base
     docs_result = await db.execute(
         select(Document).where(Document.tenant_id == db_tenant.id)

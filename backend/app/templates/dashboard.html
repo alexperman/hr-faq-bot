@@ -491,6 +491,10 @@
             try {
                 const res = await fetch(`${getApiUrl()}/kb/`, { headers: authHeaders() });
                 if (res.status === 401) return redirectToLogin();
+                if (res.status === 402) {
+                    list.innerHTML = '<div class="empty-state">Your subscription is not active. Activate your plan in Billing to access HR documents.</div>';
+                    return;
+                }
                 const docs = await res.json();
                 count.textContent = `${docs.length} doc${docs.length !== 1 ? 's' : ''}`;
 

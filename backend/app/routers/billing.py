@@ -155,13 +155,25 @@ async def create_subscription(
         # Update plan/price for renewal
         subscription.plan = request.plan
         subscription.price = tier["price"]
+        subscription.status = "pending"
 
     # Call PayPal to create subscription
     try:
+        plan_price_id = {
+            "starter": settings.PRICE_ID_STARTER,
+            "growth": settings.PRICE_ID_GROWTH,
+            "enterprise": settings.PRICE_ID_ENTERPRISE,
+        }.get(request.plan) or settings.PRICE_ID
+
+        return_url = f"{settings.APP_URL}/{db_tenant.slug}/billing/success"
+        cancel_url = f"{settings.APP_URL}/{db_tenant.slug}/billing/cancel"
+
         paypal_result = await paypal_create_subscription(
             name=current_user.full_name,
             email=current_user.email,
-            plan_id=settings.PRICE_ID,
+            plan_id=plan_price_id,
+            return_url=return_url,
+            cancel_url=cancel_url,
         )
         subscription.paypal_subscription_id = paypal_result["subscription_id"]
         await db.commit()
