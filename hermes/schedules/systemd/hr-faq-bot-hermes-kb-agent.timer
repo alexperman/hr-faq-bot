@@ -5,6 +5,7 @@ Description=Run Hermes kb-agent weekly
 OnBootSec=20min
 OnCalendar=weekly
 Persistent=true
+Unit=hr-faq-bot-hermes@kb-agent.service
 
 [Install]
 WantedBy=timers.target

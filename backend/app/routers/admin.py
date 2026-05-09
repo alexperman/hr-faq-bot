@@ -1,10 +1,14 @@
+import os
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+
 from app.config import get_settings
 from app.database import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
-from app.models import WebhookEvent
+from app.models import WebhookEvent, Subscription, Tenant, Document
+from app.services.rate_limit import get_rate_limit_stats
 
 settings = get_settings()
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -12,13 +16,32 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 def require_admin(authorization: str | None = Header(default=None)) -> None:
     if not settings.ADMIN_API_KEY:
-        # If not configured, deny by default in production-like mode.
-        # (Helps avoid accidental exposure.)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Admin auth not configured")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin auth not configured",
+        )
 
     expected = f"Bearer {settings.ADMIN_API_KEY}"
     if authorization != expected:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin token")
+
+
+APP_START_TIME = datetime.now(timezone.utc)
+
+
+async def _db_ping(db: AsyncSession) -> bool:
+    try:
+        await db.execute(select(1))
+        return True
+    except Exception:
+        return False
+
+
+async def _latest_webhook(db: AsyncSession) -> WebhookEvent | None:
+    result = await db.execute(
+        select(WebhookEvent).order_by(WebhookEvent.received_at.desc()).limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 @router.get("/health")
@@ -26,25 +49,202 @@ async def admin_health(_: None = Depends(require_admin)):
     return {"status": "ok"}
 
 
-@router.get("/billing/webhook/latest")
-async def latest_webhook_event(
+@router.get("/system/health")
+async def system_health(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return the latest PayPal webhook verification attempt."""
-    result = await db.execute(
-        select(WebhookEvent).order_by(WebhookEvent.received_at.desc()).limit(1)
-    )
-    ev = result.scalar_one_or_none()
-    if not ev:
-        return {"event": None}
+    """Operational health: DB + PayPal webhook + KB readiness + rate-limit anomalies."""
+
+    db_ok = await _db_ping(db)
+
+    latest = await _latest_webhook(db)
+    paypal_ok = bool(latest and latest.verified)
+    paypal_received_at = latest.received_at.isoformat() if latest and latest.received_at else None
+
+    # KB readiness signals (aggregate only, no tenant details)
+    docs_total = (await db.execute(select(func.count()).select_from(Document))).scalar_one()
+    docs_last_updated_at_row = await db.execute(select(func.max(Document.updated_at)))
+    docs_last_updated_at = docs_last_updated_at_row.scalar_one()
+    docs_last_updated_iso = docs_last_updated_at.isoformat() if docs_last_updated_at else None
+
+    # Rate limit anomalies
+    rl = get_rate_limit_stats()
+
+    # Active subscriptions count (aggregate)
+    active_subs = (
+        await db.execute(
+            select(func.count()).select_from(Subscription).where(Subscription.status == "active")
+        )
+    ).scalar_one()
+
+    kb_warning = None
+    if active_subs > 0 and docs_total == 0:
+        kb_warning = "Active tenants exist but documents corpus is empty"
+
     return {
-        "event": {
-            "paypal_event_id": ev.paypal_event_id,
-            "event_type": ev.event_type,
-            "verification_status": ev.verification_status,
-            "verified": ev.verified,
-            "verification_detail": ev.verification_detail,
-            "received_at": ev.received_at.isoformat(),
-        }
+        "ok": db_ok,
+        "db": {"ok": db_ok},
+        "api": {"ok": True, "start_time": APP_START_TIME.isoformat()},
+        "rate_limit": {
+            "exceeded_last_60s": rl.get("exceeded_last_60s"),
+            "exceeded_last_24h": rl.get("exceeded_last_24h"),
+        },
+        "kb": {
+            "docs_total": docs_total,
+            "docs_last_updated_at": docs_last_updated_iso,
+            "warning": kb_warning,
+        },
+        "paypal": {
+            "latest_webhook_verified": paypal_ok,
+            "latest_webhook_event_type": latest.event_type if latest else None,
+            "latest_webhook_received_at": paypal_received_at,
+            "webhook_processing_ok": paypal_ok,
+        },
+    }
+
+
+@router.get("/system/logs")
+async def system_logs(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Structured operational logs (safe aggregates + recent webhook verification attempts)."""
+
+    # Recent webhook verification attempts (do not include full payload)
+    result = await db.execute(
+        select(WebhookEvent)
+        .order_by(WebhookEvent.received_at.desc())
+        .limit(20)
+    )
+    events = result.scalars().all()
+
+    rl = get_rate_limit_stats()
+
+    return {
+        "recent_webhook_events": [
+            {
+                "paypal_event_id": ev.paypal_event_id,
+                "event_type": ev.event_type,
+                "verified": ev.verified,
+                "verification_status": ev.verification_status,
+                "verification_detail": ev.verification_detail,
+                "received_at": ev.received_at.isoformat(),
+            }
+            for ev in events
+        ],
+        "recent_rate_limit_exceeds": rl.get("recent_exceeded_events", []),
+    }
+
+
+@router.get("/system/stats")
+async def system_stats(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Aggregate stats (no tenant-level data)."""
+
+    tenants_total = (await db.execute(select(func.count()).select_from(Tenant))).scalar_one()
+    subs_by_status = await db.execute(
+        select(Subscription.status, func.count()).group_by(Subscription.status)
+    )
+    subs_by_status_rows = subs_by_status.all()
+
+    docs_total = (await db.execute(select(func.count()).select_from(Document))).scalar_one()
+    docs_last_updated_at_row = await db.execute(select(func.max(Document.updated_at)))
+    docs_last_updated_at = docs_last_updated_at_row.scalar_one()
+
+    rl = get_rate_limit_stats()
+
+    latest = await _latest_webhook(db)
+
+    now = datetime.now(timezone.utc)
+    cutoff_24h = now - timedelta(days=1)
+
+    paypal_failures_24h = (
+        await db.execute(
+            select(func.count()).select_from(WebhookEvent).where(
+                WebhookEvent.received_at >= cutoff_24h,
+                WebhookEvent.verified == False,  # noqa: E712
+            )
+        )
+    ).scalar_one()
+
+    return {
+        "tenants_total": tenants_total,
+        "subscriptions_by_status": [
+            {"status": s, "count": c} for (s, c) in subs_by_status_rows
+        ],
+        "documents_total": docs_total,
+        "documents_last_updated_at": docs_last_updated_at.isoformat() if docs_last_updated_at else None,
+        "rate_limit": {
+            "exceeded_last_60s": rl.get("exceeded_last_60s"),
+            "exceeded_last_24h": rl.get("exceeded_last_24h"),
+        },
+        "paypal": {
+            "latest_webhook_verified": bool(latest and latest.verified),
+            "latest_webhook_event_type": latest.event_type if latest else None,
+            "latest_webhook_received_at": latest.received_at.isoformat() if latest else None,
+            "paypal_webhook_failures_last_24h": paypal_failures_24h,
+            "webhook_id_configured": bool(settings.PAYPAL_WEBHOOK_ID),
+        },
+    }
+
+
+@router.get("/deploy/status")
+async def deploy_status(
+    _: None = Depends(require_admin),
+):
+    """Deployment status snapshot from environment variables."""
+
+    env_keys = [
+        "RENDER_SERVICE_NAME",
+        "RENDER_INSTANCE_ID",
+        "RENDER_REGION",
+        "RENDER_GIT_COMMIT",
+        "RENDER_GIT_BRANCH",
+        "RENDER_BUILD_ID",
+    ]
+
+    env = {k: os.environ.get(k) for k in env_keys if os.environ.get(k)}
+
+    return {
+        "service": settings.APP_URL,
+        "app_start_time": APP_START_TIME.isoformat(),
+        "environment": env,
+    }
+
+
+@router.get("/paypal/status")
+async def paypal_status(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    latest = await _latest_webhook(db)
+
+    now = datetime.now(timezone.utc)
+    cutoff_24h = now - timedelta(days=1)
+
+    webhook_received_last_24h = (
+        await db.execute(
+            select(func.count()).select_from(WebhookEvent).where(
+                WebhookEvent.received_at >= cutoff_24h
+            )
+        )
+    ).scalar_one()
+
+    last_verified = bool(latest and latest.verified)
+
+    return {
+        "paypal_mode": settings.PAYPAL_MODE,
+        "webhook_id_configured": bool(settings.PAYPAL_WEBHOOK_ID),
+        "latest_webhook": {
+            "event_type": latest.event_type if latest else None,
+            "verified": latest.verified if latest else None,
+            "verification_status": latest.verification_status if latest else None,
+            "verification_detail": latest.verification_detail if latest else None,
+            "received_at": latest.received_at.isoformat() if latest else None,
+        },
+        "webhook_received_last_24h": webhook_received_last_24h,
+        "webhook_processing_ok": last_verified,
     }

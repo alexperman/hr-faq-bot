@@ -1,5 +1,9 @@
 import argparse
-from hermes.agents.infra_agent import run_infra_check
+from hermes.agents.infra_agent import (
+    run_infra_health_check,
+    run_infra_deploy_verification,
+    run_infra_incident_summarization,
+)
 from hermes.agents.memory_agent import run_memory_maintenance
 from hermes.agents.growth_agent import run_outreach_generation
 from hermes.agents.analytics_agent import run_analytics
@@ -11,8 +15,18 @@ def main():
     parser = argparse.ArgumentParser(prog="hermes")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    sub_infra_h = sub.add_parser("infra-agent-health")
+    sub_infra_h.set_defaults(func=lambda args: run_infra_health_check(args))
+
+    sub_infra_d = sub.add_parser("infra-agent-deploy")
+    sub_infra_d.set_defaults(func=lambda args: run_infra_deploy_verification(args))
+
+    sub_infra_s = sub.add_parser("infra-agent-summarize")
+    sub_infra_s.set_defaults(func=lambda args: run_infra_incident_summarization(args))
+
+    # Backwards-compat convenience
     sub_infra = sub.add_parser("infra-agent")
-    sub_infra.set_defaults(func=lambda args: run_infra_check(args))
+    sub_infra.set_defaults(func=lambda args: run_infra_health_check(args))
 
     sub_mem = sub.add_parser("memory-agent")
     sub_mem.set_defaults(func=lambda args: run_memory_maintenance(args))

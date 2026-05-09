@@ -5,6 +5,7 @@ Description=Run Hermes growth-agent daily (outreach drafts)
 OnBootSec=10min
 OnCalendar=daily
 Persistent=true
+Unit=hr-faq-bot-hermes@growth-agent.service
 
 [Install]
 WantedBy=timers.target

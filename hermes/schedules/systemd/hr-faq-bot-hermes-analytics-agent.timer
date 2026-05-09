@@ -5,6 +5,7 @@ Description=Run Hermes analytics-agent weekly
 OnBootSec=15min
 OnCalendar=weekly
 Persistent=true
+Unit=hr-faq-bot-hermes@analytics-agent.service
 
 [Install]
 WantedBy=timers.target

@@ -5,6 +5,7 @@ Description=Run Hermes support-agent hourly
 OnBootSec=30min
 OnUnitActiveSec=1h
 Persistent=true
+Unit=hr-faq-bot-hermes@support-agent.service
 
 [Install]
 WantedBy=timers.target
