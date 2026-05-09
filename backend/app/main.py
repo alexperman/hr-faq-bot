@@ -19,12 +19,14 @@ settings = get_settings()
 
 
 _db_ready: bool = False
+_db_error: str | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _db_ready
+    global _db_ready, _db_error
     app.state.db_ready = False
+    app.state.db_error = None
 
     # Startup (best-effort)
     attempts = 3
@@ -35,12 +37,16 @@ async def lifespan(app: FastAPI):
                 await conn.run_sync(Base.metadata.create_all)
             _db_ready = True
             app.state.db_ready = True
+            _db_error = None
+            app.state.db_error = None
             last_err = None
             break
         except Exception as e:
             last_err = str(e)
             _db_ready = False
             app.state.db_ready = False
+            _db_error = last_err
+            app.state.db_error = last_err
 
             # brief backoff, bounded
             if i < attempts - 1:
@@ -51,8 +57,9 @@ async def lifespan(app: FastAPI):
     if not _db_ready:
         log_event(event="db_startup_unavailable", severity="high", attempts=attempts, error=last_err)
 
-    # Expose readiness to dependencies
+    # Expose readiness + last error to dependencies
     app.state.db_ready = bool(_db_ready)
+    app.state.db_error = _db_error
 
     yield
 
@@ -132,7 +139,12 @@ if STATIC_DIR.exists():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": "alterzahen", "db": _db_ready}
+    return {
+        "status": "ok",
+        "app": "alterzahen",
+        "db": _db_ready,
+        "db_error": getattr(app.state, "db_error", None),
+    }
 
 
 # ─── Marketing / Landing Pages ───────────────────────────────────────────────
