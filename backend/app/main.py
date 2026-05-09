@@ -18,12 +18,38 @@ from app.routers import admin
 settings = get_settings()
 
 
+_db_ready: bool = False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    global _db_ready
+
+    # Startup (best-effort)
+    attempts = 3
+    last_err: str | None = None
+    for i in range(attempts):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            _db_ready = True
+            last_err = None
+            break
+        except Exception as e:
+            last_err = str(e)
+            _db_ready = False
+
+            # brief backoff, bounded
+            if i < attempts - 1:
+                import asyncio
+
+                await asyncio.sleep(1.5 * (i + 1))
+
+    if not _db_ready:
+        log_event(event="db_startup_unavailable", severity="high", attempts=attempts, error=last_err)
+
     yield
+
     # Shutdown
     await engine.dispose()
 
@@ -100,7 +126,7 @@ if STATIC_DIR.exists():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": "alterzahen"}
+    return {"status": "ok", "app": "alterzahen", "db": _db_ready}
 
 
 # ─── Marketing / Landing Pages ───────────────────────────────────────────────
