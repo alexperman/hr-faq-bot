@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from pydantic import field_validator
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 
 class Settings(BaseSettings):
@@ -48,9 +49,26 @@ class Settings(BaseSettings):
 
         # Render Postgres commonly provides postgresql://...; convert to async driver.
         if v.startswith("postgres://"):
-            return "postgresql+asyncpg://" + v[len("postgres://"):]
-        if v.startswith("postgresql://"):
-            return "postgresql+asyncpg://" + v[len("postgresql://"):]
+            v = "postgresql+asyncpg://" + v[len("postgres://"):]
+        elif v.startswith("postgresql://"):
+            v = "postgresql+asyncpg://" + v[len("postgresql://"):]
+
+        # Normalize Supabase SSL parameters for asyncpg.
+        # Supabase connection strings often include `sslmode=require`,
+        # but asyncpg does not accept `sslmode` as a connect argument.
+        # We convert `sslmode=require` -> `ssl=true`.
+        if v.startswith("postgresql+asyncpg://") or v.startswith("postgresql://"):
+            parts = urlsplit(v)
+            if parts.query:
+                q = dict(parse_qsl(parts.query, keep_blank_values=True))
+                if "sslmode" in q:
+                    q.pop("sslmode", None)
+                    q.setdefault("ssl", "true")
+                # rebuild query
+                query = urlencode(q)
+                v = urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
+
+        return v
 
         # Basic guardrail for clearly invalid values.
         if "://" not in v:
