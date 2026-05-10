@@ -13,13 +13,16 @@
         }
         body {
             font-family: 'Inter', sans-serif;
-            background: #f0f2f5;
-            height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(245,158,11,0.08), transparent 30rem),
+                #f7f8f6;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
         }
         header {
-            background: #fff;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(14px);
             padding: 12px 24px;
             display: flex;
             justify-content: space-between;
@@ -43,14 +46,14 @@
             font-size: 14px;
             font-weight: 500;
             padding: 6px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             transition: background 0.2s;
         }
         header nav a:hover {
             background: #f0f2f5;
         }
         header nav button {
-            background: #e53e3e;
+            background: #b42318;
             color: #fff;
             border: none;
             padding: 6px 14px;
@@ -61,11 +64,11 @@
             transition: background 0.2s;
         }
         header nav button:hover {
-            background: #c53030;
+            background: #912018;
         }
         #chat-container {
             flex: 1;
-            max-width: 900px;
+            max-width: 920px;
             width: 100%;
             margin: 0 auto;
             display: flex;
@@ -81,21 +84,23 @@
             padding-bottom: 16px;
         }
         .message {
-            max-width: 75%;
+            max-width: min(75%, 680px);
             padding: 12px 16px;
             border-radius: 16px;
             line-height: 1.5;
             font-size: 14px;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
         }
         .message.user {
             align-self: flex-end;
-            background: #2563eb;
+            background: #256e73;
             color: #fff;
             border-bottom-right-radius: 4px;
         }
         .message.ai {
             align-self: flex-start;
-            background: #e2e8f0;
+            background: #eef1ed;
             color: #1a1a2e;
             border-bottom-left-radius: 4px;
         }
@@ -117,7 +122,7 @@
             margin: 2px 0;
         }
         .sources a {
-            color: #2563eb;
+            color: #256e73;
             text-decoration: none;
         }
         .sources a:hover {
@@ -133,14 +138,15 @@
             flex: 1;
             padding: 12px 16px;
             border: 1px solid #e1e4e8;
-            border-radius: 12px;
+            border-radius: 10px;
             font-size: 14px;
             font-family: 'Inter', sans-serif;
             outline: none;
             transition: border-color 0.2s;
         }
         #question:focus {
-            border-color: #2563eb;
+            border-color: #256e73;
+            box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
         }
         #question:disabled {
             background: #f0f2f5;
@@ -148,7 +154,7 @@
         }
         #ask-btn {
             padding: 12px 24px;
-            background: #2563eb;
+            background: #256e73;
             color: #fff;
             border: none;
             border-radius: 12px;
@@ -158,7 +164,7 @@
             transition: background 0.2s;
         }
         #ask-btn:hover:not(:disabled) {
-            background: #1d4ed8;
+            background: #174e52;
         }
         #ask-btn:disabled {
             background: #a0aec0;
@@ -166,7 +172,7 @@
         }
         .typing {
             align-self: flex-start;
-            background: #e2e8f0;
+            background: #eef1ed;
             color: #718096;
             padding: 12px 16px;
             border-radius: 16px;
@@ -178,8 +184,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            background: #f0f2f5;
+            min-height: 100dvh;
+            background: #f7f8f6;
         }
         #login-screen h2 {
             font-size: 24px;
@@ -201,11 +207,12 @@
             outline: none;
         }
         #login-form input:focus {
-            border-color: #2563eb;
+            border-color: #256e73;
+            box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
         }
         #login-form button {
             padding: 12px;
-            background: #2563eb;
+            background: #256e73;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -214,12 +221,40 @@
             cursor: pointer;
         }
         #login-form button:hover {
-            background: #1d4ed8;
+            background: #174e52;
         }
         #login-error {
             color: #e53e3e;
             font-size: 13px;
             text-align: center;
+            min-height: 18px;
+        }
+        button, input, a { min-height: 44px; }
+        button:focus-visible, input:focus-visible, a:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
+        }
+        .empty-chat {
+            margin: auto;
+            text-align: center;
+            color: #667166;
+            border: 1px dashed #dde3dc;
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px;
+            font-size: 14px;
+        }
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        @media (max-width: 720px) {
+            header { padding: 12px 16px; gap: 10px; align-items: flex-start; flex-direction: column; }
+            header nav { width: 100%; justify-content: space-between; }
+            #chat-container { padding: 16px; }
+            #input-area { flex-direction: column; }
+            #ask-btn { width: 100%; }
+            .message { max-width: 92%; }
         }
     </style>
 </head>
@@ -243,7 +278,9 @@
     </header>
 
     <div id="chat-container">
-        <div id="chat-history"></div>
+        <div id="chat-history">
+            <div class="empty-chat">Ask a question after signing in. Answers use your active HR knowledge base.</div>
+        </div>
         <div id="input-area">
             <input type="text" id="question" placeholder="Ask a question..." autocomplete="off">
             <button id="ask-btn">Send</button>
@@ -280,17 +317,46 @@
             }
         }
 
-        function addMessage(content, isUser, sources = null) {
+        function getErrorMessage(data, fallback = 'Sorry, something went wrong. Please try again.') {
+            if (!data) return fallback;
+            if (typeof data.detail === 'string') return data.detail;
+            if (data.error && typeof data.error.message === 'string') return data.error.message;
+            if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
+            return fallback;
+        }
+
+        async function readJsonSafe(response) {
+            try { return await response.json(); } catch (e) { return null; }
+        }
+
+        function addMessage(content, isUser, sources = null, isError = false) {
+            const empty = chatHistory.querySelector('.empty-chat');
+            if (empty) empty.remove();
             const msg = document.createElement('div');
-            msg.className = `message ${isUser ? 'user' : 'ai'}`;
+            msg.className = `message ${isError ? 'error' : (isUser ? 'user' : 'ai')}`;
             msg.textContent = content;
 
             if (!isUser && sources && sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
                 sourcesDiv.className = 'sources';
-                sourcesDiv.innerHTML = `<strong>Sources:</strong><ul>${sources.map(s => 
-                    `<li>${s.url ? `<a href="${s.url}" target="_blank">${s.title || s.url}</a>` : s.title || 'Source'}</li>`
-                ).join('')}</ul>`;
+                const label = document.createElement('strong');
+                label.textContent = 'Sources:';
+                const list = document.createElement('ul');
+                sources.forEach((source) => {
+                    const item = document.createElement('li');
+                    if (source.url) {
+                        const link = document.createElement('a');
+                        link.href = source.url;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = source.title || source.url;
+                        item.appendChild(link);
+                    } else {
+                        item.textContent = source.title || 'Source';
+                    }
+                    list.appendChild(item);
+                });
+                sourcesDiv.append(label, list);
                 msg.appendChild(sourcesDiv);
             }
 
@@ -340,17 +406,15 @@
                 }
 
                 if (!response.ok) {
-                    let errDetail = '';
-                    try { errDetail = (await response.json()).detail || ''; } catch (e) {}
-                    throw new Error(errDetail || `HTTP ${response.status}`);
+                    throw new Error(getErrorMessage(await readJsonSafe(response), `HTTP ${response.status}`));
                 }
 
                 const data = await response.json();
                 hideTyping();
-                addMessage(data.answer, false, data.sources);
+                addMessage(data.answer || 'No answer returned.', false, data.sources);
             } catch (err) {
                 hideTyping();
-                addMessage(err?.message || 'Sorry, I encountered an error processing your request.', false);
+                addMessage(err?.message || 'Sorry, I encountered an error processing your request.', false, null, true);
             } finally {
                 questionInput.disabled = false;
                 askBtn.disabled = false;
@@ -372,8 +436,8 @@
                 });
 
                 if (!response.ok) {
-                    const err = await response.json();
-                    loginError.textContent = err.detail || 'Login failed';
+                    const err = await readJsonSafe(response);
+                    loginError.textContent = getErrorMessage(err, 'Login failed');
                     return;
                 }
 

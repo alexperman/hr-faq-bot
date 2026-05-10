@@ -9,33 +9,41 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --primary: #3B82F6;
-            --primary-dark: #2563EB;
+            --primary: #256E73;
+            --primary-dark: #174E52;
             --success: #10B981;
             --danger: #EF4444;
             --warning: #F59E0B;
-            --gray-50: #F9FAFB;
-            --gray-100: #F3F4F6;
-            --gray-200: #E5E7EB;
-            --gray-300: #D1D5DB;
-            --gray-500: #6B7280;
-            --gray-700: #374151;
-            --gray-900: #111827;
+            --gray-50: #F7F8F6;
+            --gray-100: #EEF1ED;
+            --gray-200: #DDE3DC;
+            --gray-300: #C8D1C7;
+            --gray-400: #8A958B;
+            --gray-500: #667166;
+            --gray-700: #344036;
+            --gray-900: #17211A;
             --white: #FFFFFF;
-            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+            --shadow: 0 1px 2px rgba(23,33,26,0.08), 0 10px 30px rgba(23,33,26,0.05);
+            --ring: 0 0 0 3px rgba(37,110,115,0.16);
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--gray-50);
+            background:
+                radial-gradient(circle at top left, rgba(245,158,11,0.08), transparent 30rem),
+                var(--gray-50);
             color: var(--gray-900);
-            min-height: 100vh;
+            min-height: 100dvh;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, .plan-card:focus-visible, .nav-link:focus-visible {
+            outline: none;
+            box-shadow: var(--ring);
         }
 
         /* Top Navigation */
         .topbar {
-            background: var(--white);
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(14px);
             border-bottom: 1px solid var(--gray-200);
             padding: 0 24px;
             height: 60px;
@@ -51,7 +59,7 @@
         .logo {
             font-weight: 700;
             font-size: 18px;
-            color: var(--primary);
+            color: var(--gray-900);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -59,7 +67,7 @@
         }
         .logo-icon {
             width: 32px; height: 32px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: var(--primary);
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             color: white; font-size: 14px; font-weight: 700;
@@ -75,6 +83,9 @@
             text-decoration: none;
             transition: all 0.15s;
             cursor: pointer;
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
         }
         .nav-link:hover { background: var(--gray-100); color: var(--gray-700); }
         .nav-link.active { background: var(--primary); color: white; }
@@ -87,7 +98,10 @@
             border-radius: 20px;
             font-size: 13px;
             font-weight: 500;
+            min-width: 0;
+            max-width: 260px;
         }
+        #user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .logout-btn {
             background: none; border: none;
             padding: 8px 14px;
@@ -100,7 +114,7 @@
         .logout-btn:hover { background: var(--gray-100); color: var(--danger); }
 
         /* Main Content */
-        .main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+        .main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 48px; }
 
         .page-header { margin-bottom: 28px; }
         .page-header h1 { font-size: 24px; font-weight: 700; color: var(--gray-900); }
@@ -108,11 +122,12 @@
 
         /* Cards Grid */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 24px; }
 
         .card {
             background: var(--white);
-            border-radius: 12px;
+            border: 1px solid rgba(221,227,220,0.82);
+            border-radius: 10px;
             box-shadow: var(--shadow);
             overflow: hidden;
         }
@@ -143,7 +158,7 @@
         .sub-detail-row .label { color: var(--gray-500); }
         .sub-detail-row .value { font-weight: 600; color: var(--gray-900); }
 
-        .plan-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+        .plan-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
         .plan-card {
             border: 2px solid var(--gray-200);
             border-radius: 10px;
@@ -151,6 +166,7 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.15s;
+            min-width: 0;
         }
         .plan-card:hover { border-color: var(--primary); }
         .plan-card.selected { border-color: var(--primary); background: #EFF6FF; }
@@ -167,6 +183,7 @@
             border: none;
             cursor: pointer;
             transition: all 0.15s;
+            min-height: 44px;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-dark); }
@@ -178,7 +195,7 @@
             border: none;
         }
         .btn-ghost:hover { background: var(--gray-200); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:disabled { opacity: 0.58; cursor: not-allowed; transform: none; }
 
         /* Document List */
         .doc-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; }
@@ -190,8 +207,11 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 12px;
         }
+        .doc-item-info { min-width: 0; }
         .doc-item-info h3 { font-size: 14px; font-weight: 600; color: var(--gray-900); }
+        .doc-item-info h3, .member-name, .member-email { overflow-wrap: anywhere; }
         .doc-item-info span { font-size: 12px; color: var(--gray-500); }
         .doc-delete-btn {
             background: none;
@@ -201,6 +221,8 @@
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 18px;
+            min-width: 44px;
+            min-height: 44px;
         }
         .doc-delete-btn:hover { background: #FEE2E2; color: var(--danger); }
 
@@ -215,11 +237,12 @@
             font-size: 14px;
             font-family: inherit;
             transition: border-color 0.15s;
+            min-height: 44px;
         }
         .form-group input:focus, .form-group textarea:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+            box-shadow: var(--ring);
         }
         .form-group textarea { min-height: 120px; resize: vertical; }
 
@@ -239,7 +262,7 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 14px; font-weight: 600;
         }
-        .member-info { flex: 1; }
+        .member-info { flex: 1; min-width: 0; }
         .member-name { font-size: 14px; font-weight: 600; color: var(--gray-900); }
         .member-email { font-size: 12px; color: var(--gray-500); }
         .owner-badge {
@@ -253,21 +276,20 @@
 
         .invite-form { display: flex; gap: 10px; margin-top: 14px; }
         .invite-form input { flex: 1; padding: 9px 12px; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 14px; }
-        .invite-form input:focus { outline: none; border-color: var(--primary); }
+        .invite-form input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
 
         /* Messages */
         .message { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
         .message.success { background: #D1FAE5; color: #065F46; display: block; }
         .message.error { background: #FEE2E2; color: #991B1B; display: block; }
         .message.info { background: #EFF6FF; color: #1E40AF; display: block; }
-        .loading { text-align: center; color: var(--gray-500); padding: 24px; font-size: 14px; }
-        .empty-state { text-align: center; color: var(--gray-400); padding: 32px 16px; font-size: 14px; }
+        .loading, .empty-state { text-align: center; color: var(--gray-500); padding: 28px 16px; font-size: 14px; border: 1px dashed var(--gray-200); border-radius: 8px; background: var(--gray-50); }
 
         /* Chat link */
         .chat-link-btn {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 10px 20px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: var(--primary);
             color: white;
             border-radius: 8px;
             font-size: 14px;
@@ -276,6 +298,27 @@
             transition: all 0.15s;
         }
         .chat-link-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .chat-shell { min-height: 320px; max-height: 500px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-row { display: flex; }
+        .chat-row.user { justify-content: flex-end; }
+        .chat-bubble { max-width: min(72%, 620px); padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .chat-bubble.user { background: var(--primary); color: white; border-bottom-right-radius: 3px; }
+        .chat-bubble.ai { background: var(--gray-100); color: var(--gray-900); border-bottom-left-radius: 3px; }
+        .chat-bubble.error { background: #FEE2E2; color: #991B1B; }
+        .chat-input-row { display: flex; gap: 10px; align-items: flex-end; }
+        .chat-input-row input { flex: 1; min-width: 0; min-height: 44px; padding: 12px 14px; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 14px; }
+        .chat-input-row input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+        @media (max-width: 860px) {
+            .topbar { height: auto; min-height: 60px; padding: 12px 16px; gap: 12px; align-items: flex-start; }
+            .topbar-left, .topbar-right { gap: 10px; flex-wrap: wrap; }
+            .topbar { flex-direction: column; }
+            .grid-3, .grid-2 { grid-template-columns: 1fr; }
+            .main { padding: 24px 16px 40px; }
+            .plan-cards { grid-template-columns: 1fr; }
+            .billing-actions, .invite-form, .chat-input-row { flex-direction: column; }
+            .billing-actions .btn, .invite-form .btn, .chat-input-row .btn { width: 100%; }
+            .chat-bubble { max-width: 92%; }
+        }
     </style>
 </head>
 <body>
@@ -352,7 +395,7 @@
                             <div id="invite-section" style="display:none;">
                                 <div class="invite-form">
                                     <input type="email" id="invite-email" placeholder="colleague@company.com">
-                                    <button class="btn btn-primary" onclick="inviteMember()">Invite</button>
+                        <button class="btn btn-primary" id="invite-btn" onclick="inviteMember()">Invite</button>
                                 </div>
                                 <div id="invite-result" style="margin-top:8px;font-size:13px;"></div>
                             </div>
@@ -410,10 +453,12 @@
             </div>
             <div class="card">
                 <div class="card-body">
-                    <div id="chat-messages" style="min-height:300px;max-height:500px;overflow-y:auto;margin-bottom:16px;"></div>
-                    <div style="display:flex;gap:10px;">
-                        <input type="text" id="chat-input" placeholder="Ask HR anything..." style="flex:1;padding:12px 14px;border:1px solid var(--gray-300);border-radius:8px;font-size:14px;" onkeydown="if(event.key==='Enter')sendChat()">
-                        <button class="btn btn-primary" onclick="sendChat()">Send</button>
+                    <div id="chat-messages" class="chat-shell">
+                        <div class="empty-state">Ask a question to test the HR assistant against your documents.</div>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chat-input" placeholder="Ask HR anything..." maxlength="1000" onkeydown="if(event.key==='Enter')sendChat()">
+                        <button class="btn btn-primary" id="chat-send-btn" onclick="sendChat()">Send</button>
                     </div>
                     <div id="chat-loading" style="display:none;text-align:center;color:var(--gray-500);font-size:13px;margin-top:8px;">Getting answer...</div>
                 </div>
@@ -435,6 +480,18 @@
         }
 
         function redirectToLogin() { window.location.href = '/login'; }
+
+        function getErrorMessage(data, fallback = 'Something went wrong. Please try again.') {
+            if (!data) return fallback;
+            if (typeof data.detail === 'string') return data.detail;
+            if (data.error && typeof data.error.message === 'string') return data.error.message;
+            if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
+            return fallback;
+        }
+
+        async function readJsonSafe(res) {
+            try { return await res.json(); } catch (e) { return null; }
+        }
 
         function showMessage(msg, type = 'info') {
             const el = document.getElementById('message');
@@ -478,10 +535,12 @@
                 if (me.is_owner) {
                     document.getElementById('invite-section').style.display = 'block';
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                showMessage('Could not load account details. Check your connection and refresh.', 'error');
+            }
 
             // Load all data in parallel
-            await Promise.all([loadDocuments(), loadSubscription(), loadTeam()]);
+            await Promise.allSettled([loadDocuments(), loadSubscription(), loadTeam()]);
         })();
 
         // ── Documents ────────────────────────────────────────────────────
@@ -493,7 +552,12 @@
                 if (res.status === 401) return redirectToLogin();
                 if (res.status === 402) {
                     list.innerHTML = '<div class="empty-state">Your subscription is not active. Activate your plan in Billing to access HR documents.</div>';
+                    count.textContent = 'Locked';
                     return;
+                }
+                if (!res.ok) {
+                    const data = await readJsonSafe(res);
+                    throw new Error(getErrorMessage(data, 'Could not load documents.'));
                 }
                 const docs = await res.json();
                 count.textContent = `${docs.length} doc${docs.length !== 1 ? 's' : ''}`;
@@ -512,7 +576,8 @@
                     </div>
                 `).join('');
             } catch (e) {
-                list.innerHTML = '<div class="empty-state">Error loading documents.</div>';
+                count.textContent = 'Error';
+                list.innerHTML = `<div class="empty-state">${escapeHtml(e.message || 'Error loading documents.')}</div>`;
             }
         }
 
@@ -520,11 +585,11 @@
             if (!confirm('Delete this document?')) return;
             try {
                 const res = await fetch(`${getApiUrl()}/kb/${id}`, { method: 'DELETE', headers: authHeaders() });
-                if (!res.ok) throw new Error();
+                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Error deleting document.'));
                 showMessage('Document deleted.', 'success');
                 loadDocuments();
             } catch (e) {
-                showMessage('Error deleting document.', 'error');
+                showMessage(e.message || 'Error deleting document.', 'error');
             }
         }
 
@@ -546,10 +611,7 @@
                     headers: authHeaders(),
                     body: JSON.stringify(data)
                 });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.detail || 'Add failed');
-                }
+                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Add failed.'));
                 showMessage('Document added.', 'success');
                 e.target.reset();
                 loadDocuments();
@@ -580,10 +642,11 @@
                 if (res.status === 404) {
                     // No subscription yet — show plan selector
                     renderPlanSelector();
-                    billingActions.innerHTML = `<button class="btn btn-primary" onclick="subscribe()">Subscribe Now</button>`;
+                    billingActions.innerHTML = `<button class="btn btn-primary" onclick="subscribe(this)">Subscribe Now</button>`;
                     return;
                 }
                 if (res.status === 401) return redirectToLogin();
+                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Could not load subscription.'));
                 const sub = await res.json();
 
                 const badge = document.getElementById('sub-badge');
@@ -599,20 +662,21 @@
                 `;
 
                 if (sub.status === 'active' || sub.status === 'pending') {
-                    billingActions.innerHTML = `<button class="btn btn-danger" onclick="cancelSubscription()">Cancel Plan</button>`;
+                    billingActions.innerHTML = `<button class="btn btn-danger" onclick="cancelSubscription(this)">Cancel Plan</button>`;
                 } else {
                     renderPlanSelector();
-                    billingActions.innerHTML = `<button class="btn btn-primary" onclick="subscribe()">Resume Plan</button>`;
+                    billingActions.innerHTML = `<button class="btn btn-primary" onclick="subscribe(this)">Resume Plan</button>`;
                 }
             } catch (e) {
-                console.error('subscription load error:', e);
+                billingActions.innerHTML = `<button class="btn btn-ghost" onclick="loadSubscription()">Retry</button>`;
+                showMessage(e.message || 'Could not load subscription.', 'error');
             }
         }
 
         function renderPlanSelector() {
             const container = document.getElementById('plan-cards');
             container.innerHTML = PLANS.map(p => `
-                <div class="plan-card ${p.id === selectedPlan ? 'selected' : ''}" onclick="selectPlan('${p.id}')" id="plan-${p.id}">
+                <div class="plan-card ${p.id === selectedPlan ? 'selected' : ''}" onclick="selectPlan('${p.id}')" id="plan-${p.id}" tabindex="0" role="button" aria-pressed="${p.id === selectedPlan}" onkeydown="if(event.key==='Enter'||event.key===' ')selectPlan('${p.id}')">
                     <div class="plan-name">${p.name}</div>
                     <div class="plan-price">$${p.price}</div>
                     <div class="plan-employees">${p.employees} employees</div>
@@ -625,12 +689,13 @@
             selectedPlan = id;
             document.querySelectorAll('.plan-card').forEach(el => {
                 el.classList.toggle('selected', el.id === `plan-${id}`);
+                el.setAttribute('aria-pressed', el.id === `plan-${id}`);
             });
         }
 
-        async function subscribe() {
-            const btn = event.target;
+        async function subscribe(btn) {
             btn.disabled = true;
+            const original = btn.textContent;
             btn.textContent = 'Redirecting to PayPal...';
 
             try {
@@ -639,25 +704,30 @@
                     headers: authHeaders(),
                     body: JSON.stringify({ plan: selectedPlan })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Subscribe failed');
+                const data = await readJsonSafe(res);
+                if (!res.ok) throw new Error(getErrorMessage(data, 'Subscribe failed.'));
                 window.location.href = data.approval_url;
             } catch (e) {
                 showMessage(e.message || 'Could not start subscription.', 'error');
                 btn.disabled = false;
-                btn.textContent = 'Subscribe Now';
+                btn.textContent = original;
             }
         }
 
-        async function cancelSubscription() {
+        async function cancelSubscription(btn) {
             if (!confirm('Cancel your subscription?')) return;
+            btn.disabled = true;
+            const original = btn.textContent;
+            btn.textContent = 'Cancelling...';
             try {
                 const res = await fetch(`${getApiUrl()}/billing/cancel`, { method: 'POST', headers: authHeaders() });
-                if (!res.ok) throw new Error('Cancel failed');
+                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Cancel failed.'));
                 showMessage('Subscription cancelled.', 'success');
                 loadSubscription();
             } catch (e) {
                 showMessage(e.message || 'Error cancelling.', 'error');
+                btn.disabled = false;
+                btn.textContent = original;
             }
         }
 
@@ -668,13 +738,14 @@
             // For now show the current user only
             try {
                 const meRes = await fetch('/auth/me', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+                if (!meRes.ok) throw new Error(getErrorMessage(await readJsonSafe(meRes), 'Could not load team.'));
                 const me = await meRes.json();
                 list.innerHTML = `
                     <div class="team-member">
                         <div class="member-avatar">${(me.full_name || me.email).charAt(0).toUpperCase()}</div>
                         <div class="member-info">
                             <div class="member-name">${escapeHtml(me.full_name || '—')}</div>
-                            <div class="member-email">${me.email}</div>
+                            <div class="member-email">${escapeHtml(me.email || '')}</div>
                         </div>
                         ${me.is_owner ? '<span class="owner-badge">Owner</span>' : ''}
                     </div>
@@ -687,8 +758,15 @@
         async function inviteMember() {
             const emailInput = document.getElementById('invite-email');
             const result = document.getElementById('invite-result');
+            const btn = document.getElementById('invite-btn');
             const email = emailInput.value.trim();
-            if (!email) return;
+            if (!email || !emailInput.checkValidity()) {
+                result.style.color = '#991B1B';
+                result.textContent = 'Enter a valid email address.';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Inviting...';
 
             try {
                 const res = await fetch('/auth/invite', {
@@ -697,15 +775,18 @@
                     body: JSON.stringify({ email })
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Invite failed');
+                if (!res.ok) throw new Error(getErrorMessage(data, 'Invite failed.'));
 
                 result.style.color = '#065F46';
-                result.innerHTML = `✓ Invited! Temp password: <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">${escapeHtml(data.temp_password)}</code> — share securely with ${email}.`;
+                result.innerHTML = `Invited. Temp password: <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">${escapeHtml(data.temp_password)}</code> - share securely with ${escapeHtml(email)}.`;
                 emailInput.value = '';
                 loadTeam();
             } catch (e) {
                 result.style.color = '#991B1B';
                 result.textContent = e.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Invite';
             }
         }
 
@@ -715,16 +796,16 @@
         async function sendChat() {
             const input = document.getElementById('chat-input');
             const loading = document.getElementById('chat-loading');
+            const btn = document.getElementById('chat-send-btn');
             const question = input.value.trim();
             if (!question) return;
 
-            // Append user message
-            chatMessages.innerHTML += `
-                <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-                    <div style="background:var(--primary);color:white;padding:10px 14px;border-radius:12px 12px 2px 12px;max-width:70%;font-size:14px;">${escapeHtml(question)}</div>
-                </div>`;
+            if (chatMessages.querySelector('.empty-state')) chatMessages.innerHTML = '';
+            appendChat(question, 'user');
             input.value = '';
             loading.style.display = 'block';
+            input.disabled = true;
+            btn.disabled = true;
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
             try {
@@ -733,23 +814,32 @@
                     headers: authHeaders(),
                     body: JSON.stringify({ question })
                 });
-                const data = await res.json();
+                const data = await readJsonSafe(res);
                 loading.style.display = 'none';
 
-                if (!res.ok) throw new Error(data.detail || 'Ask failed');
+                if (res.status === 401) return redirectToLogin();
+                if (!res.ok) throw new Error(getErrorMessage(data, 'Ask failed.'));
 
-                chatMessages.innerHTML += `
-                    <div style="display:flex;justify-content:flex-start;margin-bottom:12px;">
-                        <div style="background:var(--gray-100);color:var(--gray-900);padding:10px 14px;border-radius:12px 12px 12px 2px;max-width:70%;font-size:14px;white-space:pre-wrap;">${escapeHtml(data.answer)}</div>
-                    </div>`;
+                appendChat(data.answer || 'No answer returned.', 'ai');
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             } catch (e) {
                 loading.style.display = 'none';
-                chatMessages.innerHTML += `
-                    <div style="display:flex;justify-content:flex-start;margin-bottom:12px;">
-                        <div style="background:#FEE2E2;color:#991B1B;padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:14px;">Error: ${escapeHtml(e.message)}</div>
-                    </div>`;
+                appendChat(e.message || 'Could not send message.', 'error');
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
             }
+        }
+
+        function appendChat(text, type) {
+            const row = document.createElement('div');
+            row.className = `chat-row ${type === 'user' ? 'user' : 'ai'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${type}`;
+            bubble.textContent = text;
+            row.appendChild(bubble);
+            chatMessages.appendChild(row);
         }
     </script>
 </body>

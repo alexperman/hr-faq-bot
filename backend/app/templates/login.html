@@ -14,8 +14,10 @@
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
-      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(37,110,115,0.13), transparent 28rem),
+        #f7f8f6;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -30,8 +32,9 @@
 
     .card {
       background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      border: 1px solid #dde3dc;
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(23,33,26,0.08), 0 18px 44px rgba(23,33,26,0.08);
       padding: 40px;
       overflow: hidden;
     }
@@ -44,8 +47,8 @@
     .logo {
       width: 64px;
       height: 64px;
-      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-      border-radius: 16px;
+      background: #256e73;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -61,7 +64,7 @@
     h1 {
       font-size: 24px;
       font-weight: 700;
-      color: #1a1a2e;
+      color: #17211a;
       margin-bottom: 8px;
     }
 
@@ -72,8 +75,8 @@
 
     .form-tabs {
       display: flex;
-      background: #f3f4f6;
-      border-radius: 10px;
+      background: #eef1ed;
+      border-radius: 8px;
       padding: 4px;
       margin-bottom: 28px;
     }
@@ -88,13 +91,13 @@
       font-weight: 500;
       color: #6b7280;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 6px;
       transition: all 0.2s ease;
     }
 
     .form-tab.active {
       background: #fff;
-      color: #2563eb;
+      color: #256e73;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
@@ -113,8 +116,8 @@
     .form-input {
       width: 100%;
       padding: 12px 14px;
-      border: 1.5px solid #e5e7eb;
-      border-radius: 10px;
+      border: 1.5px solid #dde3dc;
+      border-radius: 8px;
       font-family: inherit;
       font-size: 15px;
       color: #1a1a2e;
@@ -123,8 +126,8 @@
 
     .form-input:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      border-color: #256e73;
+      box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
     }
 
     .form-input::placeholder {
@@ -135,7 +138,7 @@
       width: 100%;
       padding: 14px 24px;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       font-family: inherit;
       font-size: 15px;
       font-weight: 600;
@@ -144,14 +147,14 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+      background: #256e73;
       color: #fff;
-      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 2px 8px rgba(37,110,115,0.22);
     }
 
     .btn-primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 4px 12px rgba(37,110,115,0.28);
     }
 
     .btn-primary:active {
@@ -201,7 +204,7 @@
     }
 
     .switch-link {
-      color: #2563eb;
+      color: #256e73;
       font-weight: 500;
       cursor: pointer;
       text-decoration: none;
@@ -217,6 +220,20 @@
 
     .tenant-field.show {
       display: block;
+    }
+
+    .form-tab:focus-visible,
+    .form-input:focus-visible,
+    .btn:focus-visible,
+    .switch-link:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .card { padding: 24px 18px; }
+      .form-tabs { margin-bottom: 22px; }
     }
   </style>
 </head>
@@ -236,8 +253,8 @@
       <div class="error-message" id="errorMessage"></div>
 
       <div class="form-tabs">
-        <button class="form-tab active" data-tab="login" id="tabLogin">Sign In</button>
-        <button class="form-tab" data-tab="register" id="tabRegister">Register</button>
+        <button class="form-tab active" data-tab="login" id="tabLogin" aria-selected="true">Sign In</button>
+        <button class="form-tab" data-tab="register" id="tabRegister" aria-selected="false">Register</button>
       </div>
 
       <div class="form-section active" id="loginSection">
@@ -305,6 +322,18 @@
       errorMessage.classList.add('show');
     }
 
+    function getErrorMessage(data, fallback) {
+      if (!data) return fallback;
+      if (typeof data.detail === 'string') return data.detail;
+      if (data.error && typeof data.error.message === 'string') return data.error.message;
+      if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
+      return fallback;
+    }
+
+    async function readJsonSafe(response) {
+      try { return await response.json(); } catch (e) { return null; }
+    }
+
     function hideError() {
       errorMessage.classList.remove('show');
     }
@@ -320,7 +349,9 @@
 
       if (tab === 'login') {
         tabLogin.classList.add('active');
+        tabLogin.setAttribute('aria-selected', 'true');
         tabRegister.classList.remove('active');
+        tabRegister.setAttribute('aria-selected', 'false');
         loginSection.classList.add('active');
         registerSection.classList.remove('active');
         formTitle.textContent = 'Welcome Back';
@@ -329,7 +360,9 @@
         tenantField.classList.remove('show');
       } else {
         tabLogin.classList.remove('active');
+        tabLogin.setAttribute('aria-selected', 'false');
         tabRegister.classList.add('active');
+        tabRegister.setAttribute('aria-selected', 'true');
         loginSection.classList.remove('active');
         registerSection.classList.add('active');
         formTitle.textContent = 'Create Account';
@@ -375,18 +408,18 @@
           body: JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        const data = await readJsonSafe(response);
 
         if (!response.ok) {
-          throw new Error(data.detail || 'Invalid email or password');
+          throw new Error(getErrorMessage(data, 'Invalid email or password'));
         }
 
         localStorage.setItem('jwt_token', data.access_token);
-        localStorage.setItem('tenant_slug', data.tenant_slug);
+        localStorage.setItem('tenant_slug', data.tenant_slug || 'default');
 
-        window.location.href = `/${data.tenant_slug}/dashboard`;
+        window.location.href = `/${data.tenant_slug || 'default'}/dashboard`;
       } catch (err) {
-        showError(err.message);
+        showError(err.message || 'Connection error. Please try again.');
       } finally {
         setLoading(loginBtn, false);
       }
@@ -427,18 +460,18 @@
           body: JSON.stringify({ full_name: name, email, password, company_name })
         });
 
-        const data = await response.json();
+        const data = await readJsonSafe(response);
 
         if (!response.ok) {
-          throw new Error(data.detail || 'Registration failed. Please try again.');
+          throw new Error(getErrorMessage(data, 'Registration failed. Please try again.'));
         }
 
         localStorage.setItem('jwt_token', data.access_token);
-        localStorage.setItem('tenant_slug', data.tenant_slug);
+        localStorage.setItem('tenant_slug', data.tenant_slug || 'default');
 
-        window.location.href = `/${data.tenant_slug}/dashboard`;
+        window.location.href = `/${data.tenant_slug || 'default'}/dashboard`;
       } catch (err) {
-        showError(err.message);
+        showError(err.message || 'Connection error. Please try again.');
       } finally {
         setLoading(registerBtn, false);
       }
