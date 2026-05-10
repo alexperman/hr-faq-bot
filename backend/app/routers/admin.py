@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import WebhookEvent, Subscription, Tenant, Document
+from app.models import WebhookEvent, Subscription, Tenant, Document, Lead
 from app.services.rate_limit import get_rate_limit_stats
 from app.services.auth import get_auth_failure_stats
 from app.services.kb_monitor import get_kb_failure_stats
@@ -411,4 +411,39 @@ async def kb_reindex(
     return {
         "status": "noop",
         "reason": "keyword_search_only_currently_no_index_to_rebuild",
+    }
+
+
+@router.get("/leads/recent")
+async def leads_recent(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    limit: int = 20,
+    since_hours: int = 24,
+):
+    """Return recent marketing leads for outreach orchestration (emails only)."""
+
+    # Clamp to keep cheap and predictable
+    limit = max(1, min(200, int(limit)))
+    since_hours = max(1, min(168, int(since_hours)))
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
+    result = await db.execute(
+        select(Lead)
+        .where(Lead.created_at >= cutoff)
+        .order_by(Lead.created_at.desc())
+        .limit(limit)
+    )
+    leads = result.scalars().all()
+
+    return {
+        "leads": [
+            {
+                "id": l.id,
+                "email": l.email,
+                "source": l.source,
+                "created_at": l.created_at.isoformat(),
+            }
+            for l in leads
+        ]
     }

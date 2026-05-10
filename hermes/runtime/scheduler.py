@@ -14,6 +14,7 @@ from hermes.agents.analytics_agent import run_analytics
 from hermes.agents.kb_agent import run_kb_assist
 from hermes.agents.support_agent import run_support
 from hermes.agents.product_agent import run_product_recommendations
+from hermes.agents.leads_agent import run_leads_outreach
 
 
 class _Args:
@@ -52,6 +53,16 @@ def main() -> None:
         trigger=IntervalTrigger(hours=1),
         args=(a,),
         id="infra-summarize-1h",
+        replace_existing=True,
+        max_instances=1,
+    )
+
+    # Leads outreach drafting: every 10 minutes
+    scheduler.add_job(
+        run_leads_outreach,
+        trigger=IntervalTrigger(minutes=10),
+        args=(a,),
+        id="leads-outreach-10m",
         replace_existing=True,
         max_instances=1,
     )

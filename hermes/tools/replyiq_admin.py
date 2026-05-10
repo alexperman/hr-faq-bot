@@ -26,3 +26,9 @@ def deploy_status() -> dict:
 def paypal_status() -> dict:
     c = from_env()
     return c.get_json("/admin/paypal/status")
+
+
+def leads_recent(limit: int = 20, since_hours: int = 24) -> dict:
+    """Fetch recent marketing leads for outreach orchestration (admin only)."""
+    c = from_env()
+    return c.get_json(f"/admin/leads/recent?limit={int(limit)}&since_hours={int(since_hours)}")
