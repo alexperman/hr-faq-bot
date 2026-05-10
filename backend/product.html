@@ -191,6 +191,7 @@
             <div>
               <div class="text-xs font-semibold text-slate-300">⬆️ Upload a policy (demo)</div>
               <div class="text-[11px] text-slate-500 mt-0.5">Owners only, to show the full flow</div>
+              <div class="text-[10px] text-slate-500 mt-1">Country label is for clarity in citations.</div>
             </div>
             <span class="text-[11px] text-slate-500">Source-of-truth</span>
           </div>
@@ -217,7 +218,7 @@
           </form>
 
           <p class="text-[11px] text-slate-500 mt-2">
-            Demo alignment: answers come only from what you upload (so you can keep it jurisdiction-specific and based on general laws/policy).
+            Demo alignment: answers come only from what you upload (so you can keep it jurisdiction-specific based on general laws/policy).
             Not legal advice.
           </p>
         </div>
@@ -443,6 +444,7 @@ OTHER BENEFITS:
         const content = document.getElementById('upload-content')?.value?.trim() || '';
         const sourceUrl = document.getElementById('upload-source-url')?.value?.trim() || '';
         const country = document.getElementById('upload-country')?.value || 'DE';
+        const titleWithCountry = title.toLowerCase().includes(country.toLowerCase()) ? title : `${title} (${country})`;
 
         if (!title || !content) {
           if (statusEl) statusEl.textContent = 'Please provide both title and content.';
@@ -465,9 +467,9 @@ OTHER BENEFITS:
               'Authorization': `Bearer ${DEMO_JWT}`,
             },
             body: JSON.stringify({
-              title,
+              title: titleWithCountry,
               content,
-              source_url: sourceUrl || undefined,
+              source_url: sourceUrl || `Demo/${country}`,
             })
           });
 
