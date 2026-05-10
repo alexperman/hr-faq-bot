@@ -1,4 +1,5 @@
 import httpx
+import re
 from app.config import get_settings
 from app.services.structured_logger import log_event
 
@@ -47,6 +48,30 @@ async def ask_groq(question: str, context_docs: list[str]) -> str:
     if not settings.GROQ_API_KEY:
         log_event(event="ai_provider_failure", severity="high", provider="groq", reason="missing_api_key")
         return "AI not configured. Set GROQ_API_KEY environment variable."
+
+        # Deterministic fallback so the demo remains functional.
+        # We answer by returning the most relevant context excerpt.
+        q_words = [w for w in re.findall(r"[a-zA-Z]+", question.lower()) if len(w) >= 4]
+        best_doc = None
+        best_score = -1
+        for doc in context_docs or []:
+            lower = doc.lower()
+            score = sum(1 for w in q_words if w in lower)
+            if score > best_score:
+                best_score = score
+                best_doc = doc
+
+        source_doc = best_doc or (context_docs[0] if context_docs else "")
+        lines = [ln.strip() for ln in source_doc.splitlines() if ln.strip()]
+        excerpt = "\n".join(lines[:18])
+        if not excerpt:
+            excerpt = "No relevant information found in the provided documents."
+
+        return (
+            "AI not configured (GROQ_API_KEY missing).\n\n"
+            "Here is the relevant information from your documents:\n\n"
+            f"{excerpt[:1200]}"
+        )
 
     context_text = _truncate_context(context_docs)
 

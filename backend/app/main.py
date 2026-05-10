@@ -2,18 +2,26 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi import HTTPException
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from app.services.structured_logger import log_event
 
 from app.config import get_settings
-from app.database import engine, Base
+from app.database import engine, Base, AsyncSessionLocal
+from app.services.auth import create_access_token, hash_password
+from app.models import Tenant, User, Subscription, Document
 from app.routers import auth, kb, chat, billing, leads
 from app.routers import admin
 from app.routers import escalations
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+import json
 
 settings = get_settings()
 
@@ -56,6 +64,88 @@ async def lifespan(app: FastAPI):
 
     if not _db_ready:
         log_event(event="db_startup_unavailable", severity="high", attempts=attempts, error=last_err)
+
+    async def ensure_demo_data() -> None:
+        if not getattr(app.state, "db_ready", False):
+            return
+
+        demo_slug = "demo"
+        demo_email = "demo@replyiq.local"
+        demo_password = "demo-password"
+
+        async with AsyncSessionLocal() as session:
+            tenant_result = await session.execute(select(Tenant).where(Tenant.slug == demo_slug))
+            demo_tenant = tenant_result.scalar_one_or_none()
+
+            if demo_tenant is None:
+                demo_tenant = Tenant(name="Demo Company", slug=demo_slug)
+                session.add(demo_tenant)
+                await session.flush()
+
+            sub_result = await session.execute(
+                select(Subscription).where(Subscription.tenant_id == demo_tenant.id)
+            )
+            subscription = sub_result.scalar_one_or_none()
+
+            if subscription is None:
+                subscription = Subscription(
+                    tenant_id=demo_tenant.id,
+                    plan="starter",
+                    price=99,
+                    status="active",
+                    current_period_end=datetime.now(timezone.utc) + timedelta(days=365),
+                )
+                session.add(subscription)
+            else:
+                subscription.status = "active"
+                subscription.plan = subscription.plan or "starter"
+                subscription.price = subscription.price if subscription.price is not None else 99
+                if subscription.current_period_end is None:
+                    subscription.current_period_end = datetime.now(timezone.utc) + timedelta(days=365)
+
+            user_result = await session.execute(select(User).where(User.email == demo_email))
+            demo_user = user_result.scalar_one_or_none()
+            if demo_user is None:
+                demo_user = User(
+                    email=demo_email,
+                    password_hash=hash_password(demo_password),
+                    full_name="Demo User",
+                    tenant_id=demo_tenant.id,
+                    is_owner=True,
+                    is_active=True,
+                )
+                session.add(demo_user)
+            else:
+                demo_user.tenant_id = demo_tenant.id
+                demo_user.is_owner = True
+                demo_user.is_active = True
+
+            docs_result = await session.execute(select(Document).where(Document.tenant_id == demo_tenant.id))
+            existing_docs = docs_result.scalars().first()
+
+            if existing_docs is None:
+                kb_path = Path(__file__).parent.parent / "knowledge_base.json"
+                kb = json.loads(kb_path.read_text(encoding="utf-8"))
+                docs = []
+                for d in kb.get("documents", []):
+                    content = d.get("content", "")
+                    docs.append(
+                        Document(
+                            tenant_id=demo_tenant.id,
+                            title=d.get("title", "Untitled"),
+                            content=content,
+                            source_url=d.get("source") or None,
+                            char_count=len(content),
+                        )
+                    )
+                session.add_all(docs)
+
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+
+    await ensure_demo_data()
 
     # Expose readiness + last error to dependencies
     app.state.db_ready = bool(_db_ready)
@@ -164,6 +254,39 @@ async def presell_page():
 @app.get("/product")
 async def product_page():
     return FileResponse(TEMPLATES_DIR / "product.html")
+async def product_page(request: Request):
+    product_html_path = BASE_DIR / "product.html"
+    html = product_html_path.read_text(encoding="utf-8")
+
+    # If DB isn't ready, keep the UI as the static client-side demo.
+    if not getattr(request.app.state, "db_ready", False):
+        return HTMLResponse(
+            html.replace("__DEMO_TENANT__", "demo").replace("__DEMO_TOKEN__", "")
+        )
+
+    demo_slug = "demo"
+    demo_email = "demo@replyiq.local"
+
+    async with AsyncSessionLocal() as session:
+        tenant_result = await session.execute(select(Tenant).where(Tenant.slug == demo_slug))
+        demo_tenant = tenant_result.scalar_one_or_none()
+        user_result = await session.execute(select(User).where(User.email == demo_email))
+        demo_user = user_result.scalar_one_or_none()
+
+        if demo_tenant is None or demo_user is None:
+            return HTMLResponse(
+                html.replace("__DEMO_TENANT__", demo_slug).replace("__DEMO_TOKEN__", "")
+            )
+
+        token = create_access_token(
+            data={"user_id": demo_user.id, "tenant_slug": demo_tenant.slug},
+            expires_delta=timedelta(minutes=30),
+        )
+
+    # Inject short-lived JWT so the landing demo can call authenticated APIs.
+    token_safe = token.replace("'", "\\'")
+    html = html.replace("__DEMO_TENANT__", demo_slug).replace("__DEMO_TOKEN__", token_safe)
+    return HTMLResponse(html)
 
 
 @app.get("/success")
