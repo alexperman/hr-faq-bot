@@ -544,13 +544,31 @@
         <p class="text-gray-600 text-xs mt-2">No spam. Unsubscribe anytime. Your audit arrives within 24 hours.</p>
       </div>
       <script>
-        function handleEmailSubmit(e) {
+        async function handleEmailSubmit(e) {
           e.preventDefault();
-          var email = document.getElementById('lead-email').value;
-          console.log('Email captured:', email);
-          // TODO: Connect to Mailchimp/Klaviyo/ConvertKit
-          document.getElementById('lead-email').value = ''; window.location.href = '/success.html?email=' + encodeURIComponent(email);
-          document.getElementById('lead-email').value = '';
+          const email = document.getElementById('lead-email').value.trim();
+          if (!email) return;
+
+          try {
+            const res = await fetch('/leads/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, source: 'landing_waitlist' })
+            });
+
+            if (!res.ok) {
+              const txt = await res.text();
+              console.error('Lead subscribe failed', res.status, txt);
+              alert('Please try again in a moment.');
+              return;
+            }
+
+            document.getElementById('lead-email').value = '';
+            window.location.href = '/success.html?email=' + encodeURIComponent(email);
+          } catch (err) {
+            console.error('Lead subscribe error', err);
+            alert('Please try again in a moment.');
+          }
         }
       </script>
       
