@@ -56,6 +56,9 @@ async def list_documents(
     if db_tenant.id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this tenant")
 
+    if not current_user.is_owner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owners only")
+
     sub_result = await db.execute(select(Subscription).where(Subscription.tenant_id == db_tenant.id))
     subscription = sub_result.scalar_one_or_none()
 
@@ -98,6 +101,9 @@ async def create_document(
 
     if db_tenant.id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this tenant")
+
+    if not current_user.is_owner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owners only")
 
     sub_result = await db.execute(select(Subscription).where(Subscription.tenant_id == db_tenant.id))
     subscription = sub_result.scalar_one_or_none()
@@ -272,6 +278,9 @@ async def delete_document(
 
     if db_tenant.id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this tenant")
+
+    if not current_user.is_owner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Owners only")
 
     sub_result = await db.execute(select(Subscription).where(Subscription.tenant_id == db_tenant.id))
     subscription = sub_result.scalar_one_or_none()
