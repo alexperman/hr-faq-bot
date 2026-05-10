@@ -152,7 +152,8 @@ async def health():
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/login")
+    # Marketing landing + subscriber capture
+    return RedirectResponse(url="/index")
 
 
 @app.get("/login")
