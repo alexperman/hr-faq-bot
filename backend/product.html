@@ -186,6 +186,42 @@
           </div>
           <span class="text-xs text-slate-500" id="doc-count">3 docs</span>
         </div>
+        <div id="upload-doc-card" class="hidden p-3 border-b border-slate-700/50">
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <div class="text-xs font-semibold text-slate-300">⬆️ Upload a policy (demo)</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Owners only, to show the full flow</div>
+            </div>
+            <span class="text-[11px] text-slate-500">Source-of-truth</span>
+          </div>
+
+          <form id="upload-doc-form" class="space-y-2">
+            <input id="upload-title" class="w-full bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none" type="text" placeholder="e.g. Sick Leave Policy (DE)" maxlength="200" required />
+            <textarea id="upload-content" class="w-full bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none resize-y min-h-[96px]" placeholder="Paste the relevant handbook / general HR legal guidance..." required></textarea>
+            <input id="upload-source-url" class="w-full bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none" type="url" placeholder="Optional: source link" />
+
+            <div class="grid grid-cols-2 gap-2">
+              <select id="upload-country" class="w-full bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2 text-xs text-slate-200 outline-none">
+                <option value="DE" selected>Germany</option>
+                <option value="AT">Austria</option>
+                <option value="CH">Switzerland</option>
+                <option value="UK">United Kingdom</option>
+                <option value="US">United States</option>
+              </select>
+              <button id="upload-btn" type="submit" class="bg-brand-600 hover:bg-brand-500 text-white rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
+                Upload
+              </button>
+            </div>
+
+            <div id="upload-status" class="text-[11px] text-slate-500"> </div>
+          </form>
+
+          <p class="text-[11px] text-slate-500 mt-2">
+            Demo alignment: answers come only from what you upload (so you can keep it jurisdiction-specific and based on general laws/policy).
+            Not legal advice.
+          </p>
+        </div>
+
         <div class="p-3 space-y-2 max-h-64 overflow-y-auto" id="kb-docs">
           <!-- Docs injected by JS -->
         </div>
@@ -390,6 +426,68 @@ OTHER BENEFITS:
       } catch (e) {
         renderSample();
       }
+    }
+
+    // ─── Demo Upload Docs ───────────────────────────────────────────────────
+    function setupDemoUpload() {
+      const card = document.getElementById('upload-doc-card');
+      const form = document.getElementById('upload-doc-form');
+      const statusEl = document.getElementById('upload-status');
+
+      if (!DEMO_JWT || !card || !form) return;
+      card.classList.remove('hidden');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('upload-title')?.value?.trim() || '';
+        const content = document.getElementById('upload-content')?.value?.trim() || '';
+        const sourceUrl = document.getElementById('upload-source-url')?.value?.trim() || '';
+        const country = document.getElementById('upload-country')?.value || 'DE';
+
+        if (!title || !content) {
+          if (statusEl) statusEl.textContent = 'Please provide both title and content.';
+          return;
+        }
+
+        const btn = document.getElementById('upload-btn');
+        const original = btn?.textContent;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Uploading...';
+        }
+        if (statusEl) statusEl.textContent = `Uploading for ${country}...`;
+
+        try {
+          const res = await fetch(`/${DEMO_TENANT}/kb/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${DEMO_JWT}`,
+            },
+            body: JSON.stringify({
+              title,
+              content,
+              source_url: sourceUrl || undefined,
+            })
+          });
+
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            const msg = data?.detail || data?.error?.message || `HTTP ${res.status}`;
+            throw new Error(msg);
+          }
+
+          if (statusEl) statusEl.textContent = 'Uploaded. KB updated.';
+          await renderKBDocs();
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err?.message || 'Upload failed.';
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = original || 'Upload';
+          }
+        }
+      });
     }
 
     // ─── Chat Functions ────────────────────────────────────────────────────────
@@ -715,6 +813,7 @@ OTHER BENEFITS:
 
     // ─── Init ─────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
+      setupDemoUpload();
       await renderKBDocs();
       document.getElementById('question-input').focus();
     });
