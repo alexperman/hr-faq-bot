@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     # Admin
     ADMIN_API_KEY: str = ""
 
+    # Bots (Telegram/WhatsApp adapters)
+    # The messaging bot uses this secret to request a short-lived app JWT
+    # for a user (identified by email) so it can call the normal chat endpoint.
+    BOT_API_KEY: str = ""
+
     # PayPal
     PAYPAL_CLIENT_ID: str = ""
     PAYPAL_CLIENT_SECRET: str = ""

@@ -1,5 +1,7 @@
 import re
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -9,6 +11,7 @@ from app.database import get_db
 from app.models import User, Tenant, Subscription
 from app.schemas import UserCreate, UserLogin, Token, UserOut
 from app.services.auth import hash_password, verify_password, create_access_token, get_current_user
+from app.config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -297,3 +300,44 @@ async def set_user_role(
     user.is_owner = data.is_owner
     await db.commit()
     return {"id": user.id, "email": user.email, "is_owner": user.is_owner}
+class BotTokenRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/bot/token", response_model=Token)
+async def bot_token(
+    request_payload: BotTokenRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Bot adapter auth.
+
+    Bots (Telegram/WhatsApp) provide an app user email and present X-Bot-Token.
+    If email exists, we mint a short-lived app JWT for that user so the bot can call:
+      POST /{tenant}/chat/ask
+    """
+
+    settings = get_settings()
+
+    bot_token_header = request.headers.get("x-bot-token") or request.headers.get("X-Bot-Token")
+    if not settings.BOT_API_KEY:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Bot auth not configured")
+
+    if not bot_token_header or bot_token_header != settings.BOT_API_KEY:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid bot token")
+
+    result = await db.execute(select(User).where(User.email == request_payload.email))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
+    tenant = tenant_result.scalar_one()
+
+    # Short-lived token for bot sessions.
+    token = create_access_token(
+        data={"user_id": user.id, "tenant_slug": tenant.slug},
+        expires_delta=timedelta(minutes=30),
+    )
+    return Token(access_token=token, tenant_slug=tenant.slug)
+
