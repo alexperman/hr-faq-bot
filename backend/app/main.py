@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.database import engine, Base, AsyncSessionLocal
 from app.services.auth import create_access_token, hash_password
 from app.models import Tenant, User, Subscription, Document
-from app.routers import auth, kb, chat, billing, leads
+from app.routers import auth, kb, chat, billing, leads, demo
 from app.routers import admin
 from app.routers import escalations
 
@@ -174,6 +174,7 @@ app.include_router(kb.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
 app.include_router(leads.router)
+app.include_router(demo.router)
 app.include_router(admin.router)
 app.include_router(escalations.router)
 

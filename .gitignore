@@ -30,3 +30,7 @@ pageindex_workspace/
 dist/
 build/
 *.log
+
+# Hermes runtime memory outputs
+hermes/memory/*
+!hermes/memory/__init__.py

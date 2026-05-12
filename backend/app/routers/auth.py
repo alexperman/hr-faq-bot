@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, EmailStr
 
 from app.database import get_db
-from app.models import User, Tenant, Subscription
+from app.models import User, Tenant, Subscription, Lead, FunnelEvent
 from app.schemas import UserCreate, UserLogin, Token, UserOut
 from app.services.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.config import get_settings
@@ -56,7 +56,20 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
         is_owner=True,
     )
     db.add(user)
+    await db.flush()
 
+    lead_result = await db.execute(select(Lead).where(Lead.email == data.email))
+    existing_lead = lead_result.scalar_one_or_none()
+
+    db.add(
+        FunnelEvent(
+            event_type="signup",
+            tenant_id=tenant.id,
+            user_id=user.id,
+            lead_id=existing_lead.id if existing_lead else None,
+            payload={"source": "web_register"},
+        )
+    )
 
     try:
         await db.commit()
@@ -126,6 +139,20 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
 
     tenant_result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
     tenant = tenant_result.scalar_one()
+
+    lead_result = await db.execute(select(Lead).where(Lead.email == user.email))
+    existing_lead = lead_result.scalar_one_or_none()
+
+    db.add(
+        FunnelEvent(
+            event_type="login",
+            tenant_id=tenant.id,
+            user_id=user.id,
+            lead_id=existing_lead.id if existing_lead else None,
+            payload={"source": "web_login"},
+        )
+    )
+    await db.commit()
 
     token = create_access_token(data={"user_id": user.id, "tenant_slug": tenant.slug})
     return Token(access_token=token, tenant_slug=tenant.slug)

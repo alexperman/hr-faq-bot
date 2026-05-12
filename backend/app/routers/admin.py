@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import WebhookEvent, Subscription, Tenant, Document, Lead
+from app.models import WebhookEvent, Subscription, Tenant, Document, Lead, FunnelEvent
 from app.services.rate_limit import get_rate_limit_stats
 from app.services.auth import get_auth_failure_stats
 from app.services.kb_monitor import get_kb_failure_stats
@@ -445,5 +445,43 @@ async def leads_recent(
                 "created_at": l.created_at.isoformat(),
             }
             for l in leads
+        ]
+    }
+
+
+@router.get("/funnel/recent")
+async def funnel_recent(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    limit: int = 200,
+    since_hours: int = 168,
+):
+    """Return recent funnel events (instrumentation for growth/funnel intelligence)."""
+
+    limit = max(1, min(1000, int(limit)))
+    since_hours = max(1, min(720, int(since_hours)))
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
+
+    result = await db.execute(
+        select(FunnelEvent)
+        .where(FunnelEvent.created_at >= cutoff)
+        .order_by(FunnelEvent.created_at.desc())
+        .limit(limit)
+    )
+    events = result.scalars().all()
+
+    return {
+        "events": [
+            {
+                "id": ev.id,
+                "event_type": ev.event_type,
+                "tenant_id": ev.tenant_id,
+                "user_id": ev.user_id,
+                "lead_id": ev.lead_id,
+                "created_at": ev.created_at.isoformat(),
+                "payload": ev.payload,
+            }
+            for ev in events
         ]
     }

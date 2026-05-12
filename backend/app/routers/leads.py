@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import Lead
+from app.models import Lead, FunnelEvent
 from app.schemas.lead import LeadSubscribeRequest
 from app.services.structured_logger import log_event
 
@@ -24,12 +24,20 @@ async def subscribe_lead(
 
     try:
         db.add(lead)
+        await db.flush()
+        db.add(
+            FunnelEvent(
+                event_type="landing_subscribe",
+                lead_id=lead.id,
+                payload={"source": req.source},
+            )
+        )
         await db.commit()
         return {"status": "ok"}
     except IntegrityError:
         await db.rollback()
         # Treat duplicate as success (idempotent-ish for the funnel).
-        log_event(event="lead_subscribe_duplicate", severity="info", email=str(req.email))
+        log_event(event="lead_subscribe_duplicate", severity="info", source=req.source)
         return {"status": "already_registered"}
     except Exception as e:
         await db.rollback()

@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_validator
 import httpx
 
 from app.database import get_db
-from app.models import Document, User, Tenant, Subscription
+from app.models import Document, User, Tenant, Subscription, FunnelEvent
 from app.services.auth import get_current_user
 from app.services.kb_monitor import record_kb_failure
 from app.config import get_settings
@@ -125,6 +125,24 @@ async def create_document(
         db.add(document)
         await db.commit()
         await db.refresh(document)
+
+        # Instrument funnel step (best-effort; never block KB write)
+        try:
+            db.add(
+                FunnelEvent(
+                    event_type="kb_upload",
+                    tenant_id=db_tenant.id,
+                    user_id=current_user.id,
+                    payload={
+                        "title": (data.title or "")[:200],
+                        "char_count": len(data.content),
+                    },
+                )
+            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
+
     except Exception as e:
         record_kb_failure(tenant_slug=tenant, reason=e.__class__.__name__)
         raise

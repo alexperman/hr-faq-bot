@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.models import User, Document, Tenant, Subscription, Escalation, ChatMessage
+from app.models import User, Document, Tenant, Subscription, FunnelEvent
 from app.services.auth import get_current_user
 from app.services.groq import ask_groq
 from app.services.rate_limit import check_rate_limit
@@ -111,6 +112,24 @@ async def ask_question(
     
     # Handle empty knowledge base
     if not all_docs:
+        try:
+            db.add(
+                FunnelEvent(
+                    event_type="chat_ask",
+                    tenant_id=db_tenant.id,
+                    user_id=current_user.id,
+                    payload={
+                        "question_len": len(request.question or ""),
+                        "sources_count": 0,
+                        "flagged": True,
+                        "reason": "empty_kb",
+                    },
+                )
+            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
+
         return AskResponse(
             answer="The knowledge base is currently empty. Please add some HR documents first before asking questions.",
             sources=[],
@@ -120,6 +139,24 @@ async def ask_question(
     relevant_docs = simple_search(request.question, all_docs, top_k=5)
     
     if not relevant_docs:
+        try:
+            db.add(
+                FunnelEvent(
+                    event_type="chat_ask",
+                    tenant_id=db_tenant.id,
+                    user_id=current_user.id,
+                    payload={
+                        "question_len": len(request.question or ""),
+                        "sources_count": 0,
+                        "flagged": True,
+                        "reason": "no_relevant_docs",
+                    },
+                )
+            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
+
         return AskResponse(
             answer="I couldn't find any relevant information in the knowledge base for your question. Please try rephrasing or contact HR directly for assistance.",
             sources=[],
@@ -262,3 +299,22 @@ async def search_chat_history(
         )
         for m in reversed(messages)
     ]
+    try:
+        db.add(
+            FunnelEvent(
+                event_type="chat_ask",
+                tenant_id=db_tenant.id,
+                user_id=current_user.id,
+                payload={
+                    "question_len": len(request.question or ""),
+                    "sources_count": len(sources),
+                    "flagged": False,
+                    "reason": "answered_from_kb",
+                },
+            )
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+
+    return AskResponse(answer=answer, sources=sources)

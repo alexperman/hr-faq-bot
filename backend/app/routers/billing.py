@@ -5,7 +5,7 @@ from sqlalchemy import select
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import User, Tenant, Subscription, WebhookEvent
+from app.models import User, Tenant, Subscription, WebhookEvent, FunnelEvent
 from app.services.auth import get_current_user
 from app.services.paypal import (
     create_subscription as paypal_create_subscription,
@@ -315,6 +315,13 @@ async def handle_paypal_webhook(
             if subscription:
                 subscription.status = "active"
                 subscription.current_period_end = datetime.now(timezone.utc) + timedelta(days=30)
+                db.add(
+                    FunnelEvent(
+                        event_type="billing_activated",
+                        tenant_id=subscription.tenant_id,
+                        payload={"paypal_subscription_id": subscription.paypal_subscription_id},
+                    )
+                )
                 await db.commit()
 
     elif event_type == "BILLING.SUBSCRIPTION.CANCELLED":
@@ -328,6 +335,13 @@ async def handle_paypal_webhook(
             subscription = result.scalar_one_or_none()
             if subscription:
                 subscription.status = "cancelled"
+                db.add(
+                    FunnelEvent(
+                        event_type="billing_cancelled",
+                        tenant_id=subscription.tenant_id,
+                        payload={"paypal_subscription_id": subscription.paypal_subscription_id},
+                    )
+                )
                 await db.commit()
 
     elif event_type == "BILLING.SUBSCRIPTION.EXPIRED":
@@ -341,6 +355,13 @@ async def handle_paypal_webhook(
             subscription = result.scalar_one_or_none()
             if subscription:
                 subscription.status = "expired"
+                db.add(
+                    FunnelEvent(
+                        event_type="billing_expired",
+                        tenant_id=subscription.tenant_id,
+                        payload={"paypal_subscription_id": subscription.paypal_subscription_id},
+                    )
+                )
                 tenant_result = await db.execute(
                     select(Tenant).where(Tenant.id == subscription.tenant_id)
                 )
@@ -362,6 +383,13 @@ async def handle_paypal_webhook(
             if subscription:
                 subscription.current_period_end = datetime.now(timezone.utc) + timedelta(days=30)
                 subscription.status = "active"
+                db.add(
+                    FunnelEvent(
+                        event_type="billing_activated",
+                        tenant_id=subscription.tenant_id,
+                        payload={"paypal_subscription_id": subscription.paypal_subscription_id},
+                    )
+                )
                 await db.commit()
 
     return {"status": "ok"}

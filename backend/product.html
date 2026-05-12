@@ -815,6 +815,21 @@ OTHER BENEFITS:
 
     // ─── Init ─────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
+      if (DEMO_JWT) {
+        try {
+          fetch(`/${DEMO_TENANT}/demo/track`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${DEMO_JWT}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ source: 'product_page' }),
+          }).catch(() => null);
+        } catch (e) {
+          // best-effort only
+        }
+      }
+
       setupDemoUpload();
       await renderKBDocs();
       document.getElementById('question-input').focus();
