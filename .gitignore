@@ -1,4 +1,32 @@
-pageindex_workspace/
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .venv/
+venv/
+*.egg-info/
+
+# Environment
+.env
+backend/.env
+hermes/.env
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / temp
+pageindex_workspace/
+dist/
+build/
+*.log
