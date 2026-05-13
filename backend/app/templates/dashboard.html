@@ -1,846 +1,1578 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - AlterZahen HR FAQ</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - RelyIQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: oklch(0.18 0.02 260);
+      --ink-soft: oklch(0.35 0.015 260);
+      --ink-muted: oklch(0.52 0.01 260);
+      --surface: oklch(0.97 0.005 80);
+      --surface-raised: oklch(0.99 0.003 80);
+      --surface-sunken: oklch(0.94 0.008 80);
+      --brand: oklch(0.55 0.18 265);
+      --brand-soft: oklch(0.92 0.04 265);
+      --brand-text: oklch(0.42 0.16 265);
+      --accent: oklch(0.65 0.15 145);
+      --accent-soft: oklch(0.93 0.04 145);
+      --warm: oklch(0.68 0.12 50);
+      --warm-soft: oklch(0.94 0.03 50);
+      --danger: oklch(0.55 0.2 25);
+      --danger-soft: oklch(0.93 0.04 25);
+      --border: oklch(0.88 0.01 260);
+      --border-light: oklch(0.92 0.005 260);
+      --shadow-sm: 0 1px 2px oklch(0.18 0.02 260 / 0.04);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100dvh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
 
-        :root {
-            --primary: #256E73;
-            --primary-dark: #174E52;
-            --success: #10B981;
-            --danger: #EF4444;
-            --warning: #F59E0B;
-            --gray-50: #F7F8F6;
-            --gray-100: #EEF1ED;
-            --gray-200: #DDE3DC;
-            --gray-300: #C8D1C7;
-            --gray-400: #8A958B;
-            --gray-500: #667166;
-            --gray-700: #344036;
-            --gray-900: #17211A;
-            --white: #FFFFFF;
-            --shadow: 0 1px 2px rgba(23,33,26,0.08), 0 10px 30px rgba(23,33,26,0.05);
-            --ring: 0 0 0 3px rgba(37,110,115,0.16);
-        }
+    .site-header { position: sticky; top: 0; z-index: 50; background: color-mix(in oklch, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-light); padding: 0 clamp(16px, 4vw, 32px); height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+    .logo-mark { width: 28px; height: 28px; background: var(--brand); border-radius: 7px; display: grid; place-items: center; color: white; font-weight: 600; font-size: 13px; }
+    .logo-text { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; letter-spacing: -0.03em; }
+    .header-nav { display: flex; align-items: center; gap: 6px; }
+    .header-nav button, .header-nav a { font-family: inherit; font-size: 13px; font-weight: 500; color: var(--ink-muted); text-decoration: none; padding: 7px 14px; border-radius: var(--radius-sm); border: none; background: none; cursor: pointer; transition: all 0.15s; }
+    .header-nav button:hover, .header-nav a:hover { color: var(--ink); background: var(--surface-sunken); }
+    .header-nav .active { background: var(--brand); color: white; }
+    .header-nav .active:hover { background: var(--brand); color: white; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .user-pill { font-size: 12px; color: var(--ink-muted); padding: 4px 12px; background: var(--surface-sunken); border-radius: 100px; }
+    .sign-out { font-size: 12px; color: var(--ink-muted); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-sm); }
+    .sign-out:hover { color: var(--danger); }
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background:
-                radial-gradient(circle at top left, rgba(245,158,11,0.08), transparent 30rem),
-                var(--gray-50);
-            color: var(--gray-900);
-            min-height: 100dvh;
-        }
-        a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, .plan-card:focus-visible, .nav-link:focus-visible {
-            outline: none;
-            box-shadow: var(--ring);
-        }
+    /* Layout */
+    .app-body { flex: 1; display: flex; flex-direction: column; }
+    .section { display: none; flex: 1; flex-direction: column; }
+    .section.visible { display: flex; }
 
-        /* Top Navigation */
-        .topbar {
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--gray-200);
-            padding: 0 24px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+    /* Chat viewport - reused from product */
+    .chat-viewport { flex: 1; display: flex; flex-direction: column; max-width: 720px; width: 100%; margin: 0 auto; padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 24px); }
+    .chat-stream { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .chat-stream::-webkit-scrollbar { width: 5px; }
+    .chat-stream::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-        .topbar-left { display: flex; align-items: center; gap: 32px; }
-        .logo {
-            font-weight: 700;
-            font-size: 18px;
-            color: var(--gray-900);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-        .logo-icon {
-            width: 32px; height: 32px;
-            background: var(--primary);
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 14px; font-weight: 700;
-        }
+    .msg-row { display: flex; gap: 12px; opacity: 0; transform: translateY(12px); animation: msg-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .msg-row.user { flex-direction: row-reverse; }
+    .msg-row:nth-child(1) { animation-delay: 0.1s; }
+    .msg-row:nth-child(2) { animation-delay: 0.4s; }
+    .msg-row:nth-child(3) { animation-delay: 0.8s; }
+    .msg-row:nth-child(4) { animation-delay: 1.2s; }
+    @keyframes msg-enter { to { opacity: 1; transform: translateY(0); } }
 
-        .nav-links { display: flex; gap: 4px; }
-        .nav-link {
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--gray-500);
-            text-decoration: none;
-            transition: all 0.15s;
-            cursor: pointer;
-            min-height: 38px;
-            display: inline-flex;
-            align-items: center;
-        }
-        .nav-link:hover { background: var(--gray-100); color: var(--gray-700); }
-        .nav-link.active { background: var(--primary); color: white; }
+    .msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+    .msg-avatar.ai { background: var(--brand-soft); color: var(--brand-text); }
+    .msg-avatar.human { background: var(--warm-soft); color: var(--warm); }
+    .msg-body { max-width: 88%; min-width: 0; }
+    .msg-body .sender { font-size: 11px; font-weight: 500; color: var(--ink-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
 
-        .topbar-right { display: flex; align-items: center; gap: 16px; }
-        .user-badge {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 12px;
-            background: var(--gray-100);
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            min-width: 0;
-            max-width: 260px;
-        }
-        #user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .logout-btn {
-            background: none; border: none;
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--gray-500);
-            cursor: pointer;
-        }
-        .logout-btn:hover { background: var(--gray-100); color: var(--danger); }
+    /* Cards */
+    .card-welcome { background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: clamp(20px, 3vw, 28px); box-shadow: var(--shadow-sm); }
+    .card-welcome h2 { font-family: 'Fraunces', serif; font-size: clamp(20px, 2.5vw, 26px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 8px; }
+    .card-welcome p { font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
+    .card-welcome .tag { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 5px 12px; background: var(--surface-sunken); border-radius: 100px; font-size: 12px; font-weight: 500; color: var(--ink-muted); }
+    .card-welcome .tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 
-        /* Main Content */
-        .main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 48px; }
+    .card-stats { background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: clamp(16px, 2.5vw, 24px); box-shadow: var(--shadow-sm); }
+    .card-stats .stats-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); margin-bottom: 12px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-light); border-radius: var(--radius-md); overflow: hidden; }
+    .stat-cell { background: var(--surface-raised); padding: 14px 12px; text-align: center; }
+    .stat-cell .stat-value { font-family: 'Fraunces', serif; font-size: clamp(22px, 2.5vw, 28px); font-weight: 700; letter-spacing: -0.03em; color: var(--ink); line-height: 1; }
+    .stat-cell .stat-label { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
 
-        .page-header { margin-bottom: 28px; }
-        .page-header h1 { font-size: 24px; font-weight: 700; color: var(--gray-900); }
-        .page-header p { color: var(--gray-500); font-size: 14px; margin-top: 4px; }
+    .card-docs { background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+    .card-docs .docs-header { padding: 14px 20px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; }
+    .card-docs .docs-header span { font-size: 12px; font-weight: 500; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .card-docs .docs-header .count { font-size: 11px; padding: 2px 8px; background: var(--surface-sunken); border-radius: 100px; }
+    .doc-row { padding: 12px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-light); transition: background 0.1s; }
+    .doc-row:last-child { border-bottom: none; }
+    .doc-row:hover { background: var(--surface-sunken); }
+    .doc-row .doc-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 14px; flex-shrink: 0; background: var(--brand-soft); }
+    .doc-row .doc-title { font-size: 13px; font-weight: 500; color: var(--ink); }
+    .doc-row .doc-meta { font-size: 11px; color: var(--ink-muted); margin-top: 1px; }
+    .doc-row .doc-delete { background: none; border: none; color: var(--ink-muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: var(--radius-sm); margin-left: auto; transition: all 0.15s; }
+    .doc-row .doc-delete:hover { color: var(--danger); background: var(--danger-soft); }
 
-        /* Cards Grid */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .grid-3 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 24px; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .action-pill { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 100px; font-size: 13px; font-weight: 450; color: var(--ink-soft); cursor: pointer; transition: border-color 0.15s, color 0.15s, transform 0.1s, box-shadow 0.15s; font-family: inherit; text-align: left; line-height: 1.3; }
+    .action-pill:hover { border-color: var(--brand); color: var(--brand-text); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+    .action-pill:active { transform: translateY(0); }
 
-        .card {
-            background: var(--white);
-            border: 1px solid rgba(221,227,220,0.82);
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-        .card-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--gray-100);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .card-header h2 { font-size: 15px; font-weight: 600; color: var(--gray-900); }
-        .card-body { padding: 20px; }
+    .card-text { background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: clamp(16px, 2.5vw, 22px); box-shadow: var(--shadow-sm); }
+    .card-text p { font-size: 14px; line-height: 1.7; color: var(--ink-soft); }
+    .card-text strong { color: var(--ink); font-weight: 600; }
+    .card-text .source-cite { display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; padding: 4px 10px; background: var(--accent-soft); border-radius: 100px; font-size: 11px; font-weight: 500; color: oklch(0.38 0.1 145); }
 
-        /* Subscription Card */
-        .sub-status-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .sub-status-badge.active { background: #D1FAE5; color: #065F46; }
-        .sub-status-badge.pending { background: #FEF3C7; color: #92400E; }
-        .sub-status-badge.cancelled { background: #FEE2E2; color: #991B1B; }
+    .card-user { background: var(--ink); color: var(--surface); border-radius: var(--radius-lg); padding: 14px 18px; font-size: 14px; line-height: 1.5; margin-left: auto; max-width: 75%; }
 
-        .sub-details { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-        .sub-detail-row { display: flex; justify-content: space-between; font-size: 14px; }
-        .sub-detail-row .label { color: var(--gray-500); }
-        .sub-detail-row .value { font-weight: 600; color: var(--gray-900); }
+    /* Input */
+    .chat-input-area { padding-top: 16px; border-top: 1px solid var(--border-light); margin-top: auto; }
+    .input-wrapper { display: flex; align-items: flex-end; gap: 10px; background: var(--surface-raised); border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 6px 6px 6px 18px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .input-wrapper:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px oklch(0.55 0.18 265 / 0.08); }
+    .input-wrapper textarea { flex: 1; border: none; outline: none; background: transparent; font-family: inherit; font-size: 14px; color: var(--ink); resize: none; padding: 10px 0; line-height: 1.5; min-height: 20px; max-height: 120px; }
+    .input-wrapper textarea::placeholder { color: var(--ink-muted); }
+    .send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--brand); color: white; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s, transform 0.1s; }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:active { transform: scale(0.92); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn svg { width: 16px; height: 16px; }
 
-        .plan-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
-        .plan-card {
-            border: 2px solid var(--gray-200);
-            border-radius: 10px;
-            padding: 14px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.15s;
-            min-width: 0;
-        }
-        .plan-card:hover { border-color: var(--primary); }
-        .plan-card.selected { border-color: var(--primary); background: #EFF6FF; }
-        .plan-card .plan-name { font-weight: 600; font-size: 14px; color: var(--gray-900); }
-        .plan-card .plan-price { font-size: 20px; font-weight: 700; color: var(--primary); margin: 4px 0; }
-        .plan-card .plan-employees { font-size: 12px; color: var(--gray-500); }
+    .typing-dots { display: inline-flex; gap: 4px; padding: 14px 18px; background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-lg); }
+    .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-muted); animation: dot-pulse 1.2s ease-in-out infinite; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes dot-pulse { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.85); } 30% { opacity: 1; transform: scale(1); } }
 
-        .billing-actions { margin-top: 20px; display: flex; gap: 10px; }
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: all 0.15s;
-            min-height: 44px;
-        }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-danger:hover { background: #DC2626; }
-        .btn-ghost {
-            background: var(--gray-100);
-            color: var(--gray-700);
-            border: none;
-        }
-        .btn-ghost:hover { background: var(--gray-200); }
-        .btn:disabled { opacity: 0.58; cursor: not-allowed; transform: none; }
+    /* Settings panel */
+    .settings-panel { max-width: 600px; width: 100%; margin: 0 auto; padding: clamp(32px, 5vw, 56px) clamp(16px, 4vw, 24px); opacity: 0; animation: settings-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards; }
+    @keyframes settings-in { to { opacity: 1; } }
 
-        /* Document List */
-        .doc-list { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; }
-        .doc-item {
-            background: var(--gray-50);
-            border: 1px solid var(--gray-200);
-            border-radius: 8px;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-        .doc-item-info { min-width: 0; }
-        .doc-item-info h3 { font-size: 14px; font-weight: 600; color: var(--gray-900); }
-        .doc-item-info h3, .member-name, .member-email { overflow-wrap: anywhere; }
-        .doc-item-info span { font-size: 12px; color: var(--gray-500); }
-        .doc-delete-btn {
-            background: none;
-            border: none;
-            color: var(--gray-400);
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 18px;
-            min-width: 44px;
-            min-height: 44px;
-        }
-        .doc-delete-btn:hover { background: #FEE2E2; color: var(--danger); }
+    .settings-section { margin-bottom: 48px; padding-bottom: 40px; border-bottom: 1px solid var(--border-light); }
+    .settings-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .settings-section h3 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .settings-section .section-hint { font-size: 13px; color: var(--ink-muted); margin-bottom: 20px; line-height: 1.5; }
 
-        /* Add Document Form */
-        .add-doc-form { display: flex; flex-direction: column; gap: 14px; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
-        .form-group input, .form-group textarea {
-            padding: 10px 12px;
-            border: 1px solid var(--gray-300);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border-color 0.15s;
-            min-height: 44px;
-        }
-        .form-group input:focus, .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: var(--ring);
-        }
-        .form-group textarea { min-height: 120px; resize: vertical; }
+    .doc-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
+    .doc-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-md); transition: border-color 0.15s, transform 0.15s; }
+    .doc-item:hover { border-color: var(--border); }
+    .doc-item .doc-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); display: grid; place-items: center; font-size: 14px; flex-shrink: 0; background: var(--brand-soft); }
+    .doc-item .doc-info { flex: 1; min-width: 0; }
+    .doc-item .doc-name { font-size: 13px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .doc-item .doc-meta { font-size: 11px; color: var(--ink-muted); margin-top: 2px; }
+    .doc-item .doc-remove { width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent; color: var(--ink-muted); cursor: pointer; display: grid; place-items: center; font-size: 16px; transition: background 0.15s, color 0.15s; flex-shrink: 0; }
+    .doc-item .doc-remove:hover { background: var(--danger-soft); color: var(--danger); }
+    .doc-item.removing { opacity: 0; transform: translateX(-8px); transition: opacity 0.25s, transform 0.25s; }
 
-        /* Team Members */
-        .team-list { display: flex; flex-direction: column; gap: 10px; }
-        .team-member {
-            display: flex; align-items: center; gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--gray-100);
-        }
-        .team-member:last-child { border-bottom: none; }
-        .member-avatar {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: 600;
-        }
-        .member-info { flex: 1; min-width: 0; }
-        .member-name { font-size: 14px; font-weight: 600; color: var(--gray-900); }
-        .member-email { font-size: 12px; color: var(--gray-500); }
-        .owner-badge {
-            font-size: 11px;
-            background: #FEF3C7;
-            color: #92400E;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: 600;
-        }
+    .add-doc-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--brand-text); cursor: pointer; padding: 8px 0; border: none; background: none; font-family: inherit; transition: opacity 0.15s; }
+    .add-doc-toggle:hover { opacity: 0.7; }
+    .add-doc-toggle svg { width: 14px; height: 14px; }
 
-        .invite-form { display: flex; gap: 10px; margin-top: 14px; }
-        .invite-form input { flex: 1; padding: 9px 12px; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 14px; }
-        .invite-form input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+    .add-doc-form { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+    .add-doc-form.open { grid-template-rows: 1fr; }
+    .add-doc-form > div { overflow: hidden; }
 
-        /* Messages */
-        .message { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
-        .message.success { background: #D1FAE5; color: #065F46; display: block; }
-        .message.error { background: #FEE2E2; color: #991B1B; display: block; }
-        .message.info { background: #EFF6FF; color: #1E40AF; display: block; }
-        .loading, .empty-state { text-align: center; color: var(--gray-500); padding: 28px 16px; font-size: 14px; border: 1px dashed var(--gray-200); border-radius: 8px; background: var(--gray-50); }
+    .form-field { margin-bottom: 14px; }
+    .form-field label { display: block; font-size: 12px; font-weight: 500; color: var(--ink-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-field input, .form-field textarea { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface-raised); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-field input:focus, .form-field textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px oklch(0.55 0.18 265 / 0.06); }
+    .form-field input::placeholder, .form-field textarea::placeholder { color: oklch(0.62 0.005 260); }
+    .form-field textarea { min-height: 100px; resize: vertical; }
 
-        /* Chat link */
-        .chat-link-btn {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 10px 20px;
-            background: var(--primary);
-            color: white;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.15s;
-        }
-        .chat-link-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
-        .chat-shell { min-height: 320px; max-height: 500px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
-        .chat-row { display: flex; }
-        .chat-row.user { justify-content: flex-end; }
-        .chat-bubble { max-width: min(72%, 620px); padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
-        .chat-bubble.user { background: var(--primary); color: white; border-bottom-right-radius: 3px; }
-        .chat-bubble.ai { background: var(--gray-100); color: var(--gray-900); border-bottom-left-radius: 3px; }
-        .chat-bubble.error { background: #FEE2E2; color: #991B1B; }
-        .chat-input-row { display: flex; gap: 10px; align-items: flex-end; }
-        .chat-input-row input { flex: 1; min-width: 0; min-height: 44px; padding: 12px 14px; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 14px; }
-        .chat-input-row input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
-        @media (max-width: 860px) {
-            .topbar { height: auto; min-height: 60px; padding: 12px 16px; gap: 12px; align-items: flex-start; }
-            .topbar-left, .topbar-right { gap: 10px; flex-wrap: wrap; }
-            .topbar { flex-direction: column; }
-            .grid-3, .grid-2 { grid-template-columns: 1fr; }
-            .main { padding: 24px 16px 40px; }
-            .plan-cards { grid-template-columns: 1fr; }
-            .billing-actions, .invite-form, .chat-input-row { flex-direction: column; }
-            .billing-actions .btn, .invite-form .btn, .chat-input-row .btn { width: 100%; }
-            .chat-bubble { max-width: 92%; }
-        }
-    </style>
+    .form-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .btn-primary { padding: 10px 20px; background: var(--brand); color: white; border: none; border-radius: var(--radius-md); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost { padding: 10px 16px; background: none; color: var(--ink-muted); border: none; border-radius: var(--radius-md); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: color 0.15s; }
+    .btn-ghost:hover { color: var(--ink); }
+    .btn-danger { padding: 10px 20px; background: var(--danger-soft); color: var(--danger); border: 1px solid oklch(0.55 0.2 25 / 0.15); border-radius: var(--radius-md); font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+    .btn-danger:hover { opacity: 0.8; }
+
+    /* Team section */
+    .team-member { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-md); }
+    .team-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: grid; place-items: center; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+    .team-info { flex: 1; min-width: 0; }
+    .team-name { font-size: 14px; font-weight: 500; color: var(--ink); }
+    .team-email { font-size: 12px; color: var(--ink-muted); margin-top: 1px; }
+    .team-badge { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 100px; background: var(--warm-soft); color: var(--warm); }
+
+    .invite-row { display: flex; gap: 8px; margin-top: 16px; }
+    .invite-row input { flex: 1; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface-raised); outline: none; transition: border-color 0.2s; }
+    .invite-row input:focus { border-color: var(--brand); }
+    .invite-row input::placeholder { color: oklch(0.62 0.005 260); }
+    .invite-feedback { font-size: 12px; margin-top: 8px; min-height: 18px; transition: opacity 0.2s; }
+
+    /* Subscription */
+    .sub-status { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-md); }
+    .sub-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .sub-dot.active { background: var(--accent); }
+    .sub-dot.inactive { background: var(--warm); }
+    .sub-info { flex: 1; }
+    .sub-plan { font-size: 14px; font-weight: 500; color: var(--ink); }
+    .sub-detail { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+
+    .empty-state { padding: 20px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-md); font-size: 13px; color: var(--ink-muted); line-height: 1.6; }
+
+    /* Add tabs */
+    .add-tabs { display: flex; gap: 2px; background: var(--surface-sunken); border-radius: var(--radius-md); padding: 3px; }
+    .add-tab { flex: 1; padding: 8px 12px; border: none; background: none; font-family: inherit; font-size: 12px; font-weight: 500; color: var(--ink-muted); cursor: pointer; border-radius: 8px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .add-tab.active { background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+    /* Drop zone */
+    .drop-zone { border: 1.5px dashed var(--border); border-radius: var(--radius-md); padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 14px; }
+    .drop-zone:hover { border-color: var(--brand); background: oklch(0.55 0.18 265 / 0.02); }
+    .drop-zone.dragover { border-color: var(--brand); background: var(--brand-soft); }
+    .drop-zone.has-file { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+    .drop-zone-content { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--ink-muted); }
+    .drop-zone-content svg { color: var(--ink-muted); }
+    .drop-zone-content span { font-size: 13px; }
+    .drop-hint { font-size: 11px; color: oklch(0.6 0.005 260); }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--surface); padding: 10px 20px; border-radius: 100px; font-size: 13px; font-weight: 500; pointer-events: none; transition: opacity 0.3s, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Document review panel */
+    .doc-review { position: fixed; inset: 0; z-index: 200; display: flex; opacity: 0; pointer-events: none; transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    /* Escalation items */
+    .esc-item { padding: 16px; background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; }
+    .esc-item:hover { border-color: var(--brand); }
+    .esc-item .esc-question { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 6px; line-height: 1.4; }
+    .esc-item .esc-from { font-size: 12px; color: var(--ink-muted); }
+    .esc-item .esc-status { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 100px; margin-left: 8px; }
+    .esc-item .esc-status.pending { background: var(--warm-soft); color: var(--warm); }
+    .esc-item .esc-status.replied { background: var(--accent-soft); color: oklch(0.38 0.1 145); }
+    .esc-ai-hint { font-size: 12px; color: var(--ink-muted); margin-top: 8px; padding: 8px 12px; background: var(--surface-sunken); border-radius: var(--radius-sm); line-height: 1.5; }
+
+    .reply-textarea { width: 100%; min-height: 100px; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface-raised); outline: none; resize: vertical; transition: border-color 0.2s; }
+    .reply-textarea:focus { border-color: var(--brand); }
+    .kb-suggest-btn { font-size: 12px; color: var(--brand-text); background: var(--brand-soft); border: none; padding: 6px 12px; border-radius: 100px; cursor: pointer; font-family: inherit; font-weight: 500; transition: opacity 0.15s; }
+    .kb-suggest-btn:hover { opacity: 0.7; }
+    .kb-suggestion { font-size: 13px; color: var(--ink-soft); padding: 12px; background: var(--surface-sunken); border-radius: var(--radius-md); line-height: 1.6; margin-top: 8px; white-space: pre-wrap; }
+    .doc-review.open { opacity: 1; pointer-events: all; }
+    .doc-review-backdrop { position: absolute; inset: 0; background: oklch(0.18 0.02 260 / 0.4); }
+    .doc-review-panel { position: relative; margin-left: auto; width: 100%; max-width: 560px; background: var(--surface); border-left: 1px solid var(--border-light); display: flex; flex-direction: column; transform: translateX(20px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; }
+    .doc-review.open .doc-review-panel { transform: translateX(0); }
+    .doc-review-header { padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; align-items: flex-start; gap: 12px; }
+    .doc-review-header .doc-review-title { flex: 1; }
+    .doc-review-header h3 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .doc-review-header .meta { font-size: 12px; color: var(--ink-muted); display: flex; flex-wrap: wrap; gap: 12px; }
+    .doc-review-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface-sunken); color: var(--ink-muted); cursor: pointer; display: grid; place-items: center; font-size: 18px; flex-shrink: 0; transition: background 0.15s; }
+    .doc-review-close:hover { background: var(--border); color: var(--ink); }
+    .doc-review-body { flex: 1; overflow-y: auto; padding: 24px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .doc-review-body::-webkit-scrollbar { width: 5px; }
+    .doc-review-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .doc-review-content { font-size: 13px; line-height: 1.8; color: var(--ink-soft); white-space: pre-wrap; word-break: break-word; }
+    .doc-review-stats { padding: 16px 24px; border-top: 1px solid var(--border-light); display: flex; gap: 20px; font-size: 12px; color: var(--ink-muted); }
+    .doc-review-stats strong { color: var(--ink); font-weight: 600; }
+    .doc-review-loading { flex: 1; display: grid; place-items: center; color: var(--ink-muted); font-size: 13px; }
+
+    @media (max-width: 600px) { .doc-review-panel { max-width: 100%; } }
+
+    @media (prefers-reduced-motion: reduce) { .settings-panel { animation: none; opacity: 1; } .doc-item.removing { transition: none; } .add-doc-form { transition: none; } .toast { transition: none; } }
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .card-user { max-width: 90%; }
+      .invite-row { flex-direction: column; }
+    }
+  </style>
 </head>
 <body>
-    <!-- Top Navigation -->
-    <nav class="topbar">
-        <div class="topbar-left">
-            <a href="#" class="logo">
-                <div class="logo-icon">HR</div>
-                AlterZahen
-            </a>
-            <div class="nav-links">
-                <span class="nav-link active" id="nav-dashboard" onclick="showSection('dashboard')">Dashboard</span>
-                <span class="nav-link" id="nav-chat" onclick="showSection('chat')">Chat</span>
-            </div>
-        </div>
-        <div class="topbar-right">
-            <div class="user-badge" id="user-badge">
-                <span id="user-name">—</span>
-            </div>
-            <button class="logout-btn" onclick="logout()">Sign out</button>
-        </div>
+  <header class="site-header">
+    <a href="/" class="logo">
+      <div class="logo-mark">R</div>
+      <span class="logo-text">RelyIQ</span>
+    </a>
+    <nav class="header-nav">
+      <button class="active" id="nav-chat" onclick="showSection('chat')">Chat</button>
+      <button id="nav-escalations" onclick="showSection('escalations')">Inbox <span id="esc-badge" style="display:none; background:oklch(0.55 0.2 25); color:white; font-size:10px; padding:1px 6px; border-radius:100px; margin-left:4px;"></span></button>
+      <button id="nav-settings" onclick="showSection('settings')" style="display:none;">Settings</button>
     </nav>
+    <div class="header-right">
+      <span class="user-pill" id="user-name">—</span>
+      <button class="sign-out" onclick="logout()">Sign out</button>
+    </div>
+  </header>
 
-    <main class="main">
-        <!-- Dashboard Section -->
-        <div id="section-dashboard">
-            <div class="page-header">
-                <h1>Knowledge Base & Settings</h1>
-                <p>Manage your HR documents, billing, and team</p>
+  <div class="app-body">
+    <!-- Chat Section (primary) -->
+    <div class="section visible" id="section-chat">
+      <div class="chat-viewport">
+        <div class="chat-stream" id="chat-stream">
+          <!-- Cards injected by JS based on user profile -->
+        </div>
+        <div class="chat-input-area">
+          <div class="input-wrapper">
+            <textarea id="chat-input" rows="1" placeholder="Ask about policies, team, billing..." onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+            <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send">
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"/></svg>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:flex-end; margin-top:8px;">
+            <button onclick="openHistory()" style="font-size:12px; color:var(--ink-muted); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:var(--radius-sm); font-family:inherit; transition: color 0.15s;" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-muted)'">Chat history ↗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Escalations Section -->
+    <div class="section" id="section-escalations">
+      <div class="settings-panel" style="max-width: 700px;">
+        <div class="settings-section" style="border-bottom: none;">
+          <h3 id="inbox-title">Inbox</h3>
+          <p class="section-hint" id="inbox-hint">Questions the AI couldn't fully answer.</p>
+          <div id="escalations-list" style="margin-top: 20px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Escalation Reply Panel -->
+    <div class="doc-review" id="esc-panel" onclick="if(event.target===this||event.target.classList.contains('doc-review-backdrop'))closeEscPanel()">
+      <div class="doc-review-backdrop"></div>
+      <div class="doc-review-panel">
+        <div class="doc-review-header">
+          <div class="doc-review-title">
+            <h3 id="esc-panel-title">Reply to question</h3>
+            <div class="meta" id="esc-panel-meta"></div>
+          </div>
+          <button class="doc-review-close" onclick="closeEscPanel()">×</button>
+        </div>
+        <div class="doc-review-body" id="esc-panel-body" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- User Profile Panel -->
+    <div class="doc-review" id="user-panel" onclick="if(event.target===this||event.target.classList.contains('doc-review-backdrop'))closeUserPanel()">
+      <div class="doc-review-backdrop"></div>
+      <div class="doc-review-panel">
+        <div class="doc-review-header">
+          <div class="doc-review-title">
+            <h3 id="user-panel-title">Team member</h3>
+            <div class="meta" id="user-panel-meta"></div>
+          </div>
+          <button class="doc-review-close" onclick="closeUserPanel()">×</button>
+        </div>
+        <div class="doc-review-body" id="user-panel-body" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat History Panel -->
+    <div class="doc-review" id="history-panel" onclick="if(event.target===this||event.target.classList.contains('doc-review-backdrop'))closeHistory()">
+      <div class="doc-review-backdrop"></div>
+      <div class="doc-review-panel">
+        <div class="doc-review-header">
+          <div class="doc-review-title">
+            <h3>Chat History</h3>
+            <div class="meta">Your past conversations</div>
+          </div>
+          <button class="doc-review-close" onclick="closeHistory()">×</button>
+        </div>
+        <div style="padding: 12px 24px; border-bottom: 1px solid var(--border-light);">
+          <div class="input-wrapper" style="padding: 4px 4px 4px 14px; border-radius: var(--radius-md);">
+            <input type="text" id="history-search" placeholder="Search conversations..." style="flex:1; border:none; outline:none; background:transparent; font-family:inherit; font-size:13px; color:var(--ink); padding:8px 0;" oninput="debounceSearch(this.value)">
+            <div style="width:28px; height:28px; display:grid; place-items:center; color:var(--ink-muted);">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </div>
+          </div>
+        </div>
+        <div class="doc-review-body" id="history-body" style="padding: 16px 24px;">
+          <div class="doc-review-loading">Loading history...</div>
+        </div>
+      </div>
+    </div>
 
-            <div class="grid-3">
-                <!-- Left: Documents + Team -->
-                <div style="display: flex; flex-direction: column; gap: 24px;">
-                    <!-- Documents Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Documents</h2>
-                            <span id="doc-count" style="font-size:13px;color:var(--gray-500)">—</span>
-                        </div>
-                        <div class="card-body">
-                            <div id="doc-list" class="doc-list">
-                                <div class="loading">Loading documents...</div>
-                            </div>
-                            <div style="margin-top:16px;">
-                                <form id="add-form" class="add-doc-form">
-                                    <div class="form-group">
-                                        <label for="doc-title">Title</label>
-                                        <input type="text" id="doc-title" placeholder="e.g. Annual Leave Policy" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="doc-content">Content</label>
-                                        <textarea id="doc-content" placeholder="Paste your HR document content here..." required></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="doc-url">Source URL <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
-                                        <input type="url" id="doc-url" placeholder="https://">
-                                    </div>
-                                    <button type="submit" class="btn btn-primary" style="width:100%">Add Document</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Settings Section -->
+    <div class="section" id="section-settings">
+      <div class="settings-panel">
+        <!-- Knowledge Base -->
+        <div class="settings-section">
+          <h3>Knowledge Base</h3>
+          <p class="section-hint">Upload policy documents or import from a URL. Supports PDF, TXT, and Markdown.</p>
+          <div id="settings-docs" class="doc-list"></div>
 
-                    <!-- Team Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Team Members</h2>
-                        </div>
-                        <div class="card-body">
-                            <div id="team-list" class="team-list">
-                                <div class="loading">Loading team...</div>
-                            </div>
-                            <div id="invite-section" style="display:none;">
-                                <div class="invite-form">
-                                    <input type="email" id="invite-email" placeholder="colleague@company.com">
-                        <button class="btn btn-primary" id="invite-btn" onclick="inviteMember()">Invite</button>
-                                </div>
-                                <div id="invite-result" style="margin-top:8px;font-size:13px;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+          <!-- Upload / Import tabs -->
+          <div class="add-tabs" id="add-tabs" style="margin-top: 20px;">
+            <button class="add-tab active" id="tab-upload" onclick="switchAddTab('upload')">Upload file</button>
+            <button class="add-tab" id="tab-url" onclick="switchAddTab('url')">Import from URL</button>
+          </div>
 
-                <!-- Right: Subscription + Quick Actions -->
-                <div style="display:flex;flex-direction:column;gap:24px;">
-                    <!-- Subscription Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Subscription</h2>
-                        </div>
-                        <div class="card-body">
-                            <div id="message" class="message"></div>
-
-                            <div id="sub-status-area">
-                                <div class="sub-status-badge pending" id="sub-badge">
-                                    <span id="sub-status-text">Loading...</span>
-                                </div>
-                                <div class="sub-details" id="sub-details"></div>
-                            </div>
-
-                            <div id="plan-selector" style="display:none;">
-                                <p style="font-size:13px;color:var(--gray-500);margin-bottom:8px;">Select a plan:</p>
-                                <div class="plan-cards" id="plan-cards"></div>
-                            </div>
-
-                            <div class="billing-actions" id="billing-actions"></div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions Card -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Quick Actions</h2>
-                        </div>
-                        <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
-                            <a href="#" class="chat-link-btn" id="chat-btn" onclick="showSection('chat')">
-                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                                Open HR Chat
-                            </a>
-                        </div>
-                    </div>
-                </div>
+          <!-- Upload form -->
+          <form id="upload-form" class="add-panel" style="padding-top: 16px;">
+            <div class="form-field"><label for="upload-title">Document title</label><input type="text" id="upload-title" placeholder="e.g. Employee Handbook 2026" required></div>
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" accept=".pdf,.txt,.md,.markdown,.text" style="display:none" onchange="handleFileSelect(this)">
+              <div class="drop-zone-content" id="drop-zone-content">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                <span>Drop a file here or click to browse</span>
+                <span class="drop-hint">PDF, TXT, or Markdown · Max 10MB</span>
+              </div>
             </div>
+            <div class="form-actions"><button type="submit" class="btn-primary" id="upload-btn" disabled>Upload & process</button></div>
+          </form>
+
+          <!-- URL import form -->
+          <form id="url-form" class="add-panel" style="padding-top: 16px; display: none;">
+            <div class="form-field"><label for="url-title">Document title</label><input type="text" id="url-title" placeholder="e.g. Remote Work Policy" required></div>
+            <div class="form-field"><label for="url-input">URL</label><input type="url" id="url-input" placeholder="https://example.com/handbook.pdf" required></div>
+            <div class="form-actions"><button type="submit" class="btn-primary" id="url-btn">Import from URL</button></div>
+          </form>
         </div>
 
-        <!-- Chat Section -->
-        <div id="section-chat" style="display:none;">
-            <div class="page-header">
-                <h1>HR Assistant</h1>
-                <p>Ask any HR question — get answers from your knowledge base</p>
+        <!-- Workspace -->
+        <div class="settings-section" id="workspace-section">
+          <h3>Workspace</h3>
+          <p class="section-hint">Your organization settings. Only owners can edit these.</p>
+          <form id="workspace-form">
+            <div class="form-field"><label for="ws-name">Company name</label><input type="text" id="ws-name" placeholder="Acme Corp"></div>
+            <div class="form-field"><label for="ws-slug">Workspace URL</label>
+              <div style="display:flex; align-items:center; gap: 0;">
+                <span style="font-size:12px; color: var(--ink-muted); padding: 11px 0 11px 14px; background: var(--surface-sunken); border: 1.5px solid var(--border); border-right: none; border-radius: var(--radius-md) 0 0 var(--radius-md);">relyiq.com/</span>
+                <input type="text" id="ws-slug" placeholder="acme-corp" style="border-radius: 0 var(--radius-md) var(--radius-md) 0; border-left: none;">
+              </div>
             </div>
-            <div class="card">
-                <div class="card-body">
-                    <div id="chat-messages" class="chat-shell">
-                        <div class="empty-state">Ask a question to test the HR assistant against your documents.</div>
-                    </div>
-                    <div class="chat-input-row">
-                        <input type="text" id="chat-input" placeholder="Ask HR anything..." maxlength="1000" onkeydown="if(event.key==='Enter')sendChat()">
-                        <button class="btn btn-primary" id="chat-send-btn" onclick="sendChat()">Send</button>
-                    </div>
-                    <div id="chat-loading" style="display:none;text-align:center;color:var(--gray-500);font-size:13px;margin-top:8px;">Getting answer...</div>
-                </div>
-            </div>
+            <div class="form-actions"><button type="submit" class="btn-primary" id="ws-btn">Save changes</button></div>
+          </form>
         </div>
-    </main>
 
-    <script>
-        const TOKEN_KEY = 'jwt_token';
-        const TENANT_KEY = 'tenant_slug';
+        <!-- Profile (opens via team member click) -->
+        <div class="settings-section" id="profile-section" style="display:none;">
+          <h3>Your Profile</h3>
+          <p class="section-hint">Your personal account details.</p>
+          <form id="profile-form">
+            <div class="form-field"><label for="profile-name">Full name</label><input type="text" id="profile-name" placeholder="Jane Smith"></div>
+            <div class="form-field"><label for="profile-email">Email</label><input type="email" id="profile-email" placeholder="you@company.com"></div>
+            <div class="form-actions"><button type="submit" class="btn-primary" id="profile-btn">Update profile</button></div>
+          </form>
+        </div>
 
-        // ── Helpers ──────────────────────────────────────────────────────
-        function getToken() { return localStorage.getItem(TOKEN_KEY); }
-        function getTenant() { return localStorage.getItem(TENANT_KEY); }
-        function getApiUrl() { return `/${getTenant()}`; }
+        <!-- Team -->
+        <div class="settings-section">
+          <h3>Team</h3>
+          <p class="section-hint">Click a member to view their profile and pending questions.</p>
+          <div id="settings-team"></div>
+          <div id="invite-section" style="display:none; margin-top: 16px;">
+            <div class="invite-row">
+              <input type="email" id="invite-email" placeholder="colleague@company.com">
+              <button class="btn-primary" id="invite-btn" onclick="inviteMember()">Invite</button>
+            </div>
+            <div class="invite-feedback" id="invite-result"></div>
+          </div>
+        </div>
 
-        function authHeaders() {
-            return { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' };
+        <!-- Subscription (de-emphasized) -->
+        <div class="settings-section" style="opacity: 0.7;">
+          <h3>Subscription</h3>
+          <p class="section-hint">Not required during trial.</p>
+          <div id="settings-billing"></div>
+        </div>
+      </div>
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <!-- Document Review Panel (slide-over) -->
+  <div class="doc-review" id="doc-review" onclick="if(event.target===this||event.target.classList.contains('doc-review-backdrop'))closeReview()">
+    <div class="doc-review-backdrop"></div>
+    <div class="doc-review-panel">
+      <div class="doc-review-header">
+        <div class="doc-review-title">
+          <h3 id="review-title">Document</h3>
+          <div class="meta" id="review-meta"></div>
+        </div>
+        <button class="doc-review-close" onclick="closeReview()">×</button>
+      </div>
+      <div class="doc-review-body" id="review-body">
+        <div class="doc-review-loading">Loading content...</div>
+      </div>
+      <div class="doc-review-stats" id="review-stats"></div>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = 'jwt_token';
+    const TENANT_KEY = 'tenant_slug';
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function getTenant() { return localStorage.getItem(TENANT_KEY); }
+    function getApiUrl() { return `/${getTenant()}`; }
+    function authHeaders() { return { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' }; }
+    function redirectToLogin() { window.location.href = '/login'; }
+
+    function getErrorMessage(data, fallback = 'Something went wrong.') {
+      if (!data) return fallback;
+      if (typeof data.detail === 'string') return data.detail;
+      if (data.error?.message) return data.error.message;
+      return fallback;
+    }
+    async function readJsonSafe(res) { try { return await res.json(); } catch { return null; } }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // ── Navigation ───────────────────────────────────────────────────────
+    function showSection(name) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+      document.getElementById(`section-${name}`).classList.add('visible');
+      document.querySelectorAll('.header-nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`nav-${name}`).classList.add('active');
+    }
+
+    function logout() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TENANT_KEY); redirectToLogin(); }
+
+    // ── State ────────────────────────────────────────────────────────────
+    let currentUser = null;
+    let documents = [];
+    let subscription = null;
+    let isLoading = false;
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    (async function init() {
+      const token = getToken();
+      if (!token) return redirectToLogin();
+
+      try {
+        const meRes = await fetch('/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (meRes.status === 401) return redirectToLogin();
+        currentUser = await meRes.json();
+        document.getElementById('user-name').textContent = currentUser.full_name || currentUser.email;
+        if (currentUser.is_owner) {
+          document.getElementById('invite-section').style.display = 'block';
+          document.getElementById('nav-settings').style.display = '';
         }
+      } catch { return; }
 
-        function redirectToLogin() { window.location.href = '/login'; }
+      // Load data in parallel
+      const [docsRes, subRes] = await Promise.allSettled([
+        fetch(`${getApiUrl()}/kb/`, { headers: authHeaders() }),
+        fetch(`${getApiUrl()}/billing/status`, { headers: authHeaders() })
+      ]);
 
-        function getErrorMessage(data, fallback = 'Something went wrong. Please try again.') {
-            if (!data) return fallback;
-            if (typeof data.detail === 'string') return data.detail;
-            if (data.error && typeof data.error.message === 'string') return data.error.message;
-            if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
-            return fallback;
+      if (docsRes.status === 'fulfilled' && docsRes.value.ok) {
+        documents = await docsRes.value.json();
+      }
+      if (subRes.status === 'fulfilled' && subRes.value.ok) {
+        subscription = await readJsonSafe(subRes.value);
+      }
+
+      renderOnboardingCards();
+      renderSettings();
+      loadEscalations();
+      // Show HR replies in chat for regular users
+      if (!currentUser.is_owner) {
+        loadMyRepliesInChat();
+      }
+    })();
+
+    // ── Personalized Onboarding Cards ────────────────────────────────────
+    function renderOnboardingCards() {
+      const stream = document.getElementById('chat-stream');
+      const firstName = (currentUser.full_name || 'there').split(' ')[0];
+      const docCount = documents.length;
+      const subActive = subscription && subscription.status === 'active';
+      const isOwner = currentUser.is_owner;
+
+      // 1. Welcome card — personalized greeting
+      addCard(stream, `
+        <div class="card-welcome">
+          <h2>Good ${getTimeOfDay()}, ${escapeHtml(firstName)}</h2>
+          <p>${subActive
+            ? `Your knowledge base has ${docCount} document${docCount !== 1 ? 's' : ''} loaded. Ask me anything about your company policies — I'll find the answer and cite the source.`
+            : `Let's get your HR assistant set up. Start by activating your subscription, then upload your first policy document.`
+          }</p>
+          <div class="tag"><span class="dot"></span>${escapeHtml(getTenant())} · ${subActive ? 'Active' : 'Setup needed'}</div>
+        </div>
+      `);
+
+      // 2. Stats card — personalized to their KB
+      if (subActive && docCount > 0) {
+        const totalChars = documents.reduce((sum, d) => sum + (d.char_count || 0), 0);
+        const avgDocSize = docCount > 0 ? Math.round(totalChars / docCount) : 0;
+        addCard(stream, `
+          <div class="card-stats">
+            <div class="stats-label">Your knowledge base</div>
+            <div class="stats-grid">
+              <div class="stat-cell"><div class="stat-value">${docCount}</div><div class="stat-label">Documents</div></div>
+              <div class="stat-cell"><div class="stat-value">${formatChars(totalChars)}</div><div class="stat-label">Total content</div></div>
+              <div class="stat-cell"><div class="stat-value">${formatChars(avgDocSize)}</div><div class="stat-label">Avg doc size</div></div>
+            </div>
+          </div>
+        `);
+      }
+
+      // 3. Documents card — show what's loaded
+      if (docCount > 0) {
+        const docRows = documents.slice(0, 5).map((d, i) => {
+          const icons = ['📋', '📄', '📑', '📃', '📝'];
+          return `<div class="doc-row"><div class="doc-icon">${icons[i % icons.length]}</div><div><div class="doc-title">${escapeHtml(d.title)}</div><div class="doc-meta">${d.char_count} chars · ${new Date(d.created_at).toLocaleDateString()}</div></div></div>`;
+        }).join('');
+        addCard(stream, `
+          <div class="card-docs">
+            <div class="docs-header"><span>Your documents</span><span class="count">${docCount}</span></div>
+            ${docRows}
+          </div>
+        `);
+      }
+
+      // 4. Action pills — contextual based on state
+      let pills = [];
+      if (!subActive) {
+        pills = [
+          { icon: '💳', text: 'Activate subscription', action: "showSection('settings')" },
+          { icon: '📖', text: 'How does billing work?', action: "askQuestion('How does billing and subscription work?')" },
+        ];
+      } else if (docCount === 0) {
+        pills = [
+          { icon: '📄', text: 'Add my first document', action: "showSection('settings')" },
+          { icon: '💡', text: 'What documents should I upload?', action: "askQuestion('What kind of HR documents should I upload to get the best results?')" },
+        ];
+      } else {
+        // Active user with docs — suggest common employee questions
+        pills = [
+          { icon: '🏖️', text: 'How much PTO do employees get?', action: "askQuestion('How much PTO do employees get?')" },
+          { icon: '💻', text: 'What is our remote work policy?', action: "askQuestion('What is our remote work policy?')" },
+          { icon: '📡', text: 'What expenses can employees claim?', action: "askQuestion('What expenses can employees claim?')" },
+          { icon: '👶', text: 'How does parental leave work?', action: "askQuestion('How does parental leave work?')" },
+        ];
+        if (isOwner) {
+          pills.push({ icon: '👥', text: 'Invite a team member', action: "showSection('settings')" });
         }
+      }
 
-        async function readJsonSafe(res) {
-            try { return await res.json(); } catch (e) { return null; }
-        }
+      const pillsHtml = pills.map(p => `<button class="action-pill" onclick="${p.action}"><span style="font-size:15px">${p.icon}</span> ${escapeHtml(p.text)}</button>`).join('');
+      addCard(stream, `
+        <div class="sender" style="margin-bottom: 10px;">${subActive && docCount > 0 ? 'Common employee questions' : 'Next steps'}</div>
+        <div class="card-actions">${pillsHtml}</div>
+      `, true);
+    }
 
-        function showMessage(msg, type = 'info') {
-            const el = document.getElementById('message');
-            el.textContent = msg;
-            el.className = `message ${type}`;
-            el.style.display = 'block';
-            setTimeout(() => { el.style.display = 'none'; }, 5000);
-        }
+    function addCard(container, html, noAvatar = false) {
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.innerHTML = `
+        <div class="msg-avatar ai" ${noAvatar ? 'style="visibility:hidden"' : ''}>R</div>
+        <div class="msg-body">${html}</div>
+      `;
+      container.appendChild(row);
+    }
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
+    // Show HR replies as messages in the chat stream for regular users
+    async function loadMyRepliesInChat() {
+      try {
+        const res = await fetch(`${getApiUrl()}/escalations/my-replies`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const replies = await res.json();
+        if (!replies.length) return;
 
-        function showSection(name) {
-            document.getElementById('section-dashboard').style.display = name === 'dashboard' ? 'block' : 'none';
-            document.getElementById('section-chat').style.display = name === 'chat' ? 'block' : 'none';
-            document.getElementById('nav-dashboard').classList.toggle('active', name === 'dashboard');
-            document.getElementById('nav-chat').classList.toggle('active', name === 'chat');
-        }
+        const stream = document.getElementById('chat-stream');
 
-        async function logout() {
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(TENANT_KEY);
-            redirectToLogin();
-        }
+        // Add a divider
+        const divider = document.createElement('div');
+        divider.className = 'msg-row';
+        divider.style.animation = 'msg-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+        divider.innerHTML = `<div class="msg-avatar ai" style="visibility:hidden">R</div><div class="msg-body"><div class="sender">HR Replies</div></div>`;
+        stream.appendChild(divider);
 
-        // ── Init ─────────────────────────────────────────────────────────
-        (async function init() {
-            const token = getToken();
-            if (!token) return redirectToLogin();
+        replies.forEach(e => {
+          // Show the original question
+          const qRow = document.createElement('div');
+          qRow.className = 'msg-row user';
+          qRow.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+          qRow.innerHTML = `<div class="msg-avatar human">${(currentUser.full_name || 'U')[0].toUpperCase()}</div><div class="msg-body"><div class="card-user">${escapeHtml(e.question)}</div></div>`;
+          stream.appendChild(qRow);
 
-            // Load user info
-            try {
-                const meRes = await fetch('/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (meRes.status === 401) return redirectToLogin();
-                const me = await meRes.json();
-                document.getElementById('user-name').textContent = me.full_name || me.email;
-
-                if (me.is_owner) {
-                    document.getElementById('invite-section').style.display = 'block';
-                }
-            } catch (e) {
-                showMessage('Could not load account details. Check your connection and refresh.', 'error');
-            }
-
-            // Load all data in parallel
-            await Promise.allSettled([loadDocuments(), loadSubscription(), loadTeam()]);
-        })();
-
-        // ── Documents ────────────────────────────────────────────────────
-        async function loadDocuments() {
-            const list = document.getElementById('doc-list');
-            const count = document.getElementById('doc-count');
-            try {
-                const res = await fetch(`${getApiUrl()}/kb/`, { headers: authHeaders() });
-                if (res.status === 401) return redirectToLogin();
-                if (res.status === 402) {
-                    list.innerHTML = '<div class="empty-state">Your subscription is not active. Activate your plan in Billing to access HR documents.</div>';
-                    count.textContent = 'Locked';
-                    return;
-                }
-                if (!res.ok) {
-                    const data = await readJsonSafe(res);
-                    throw new Error(getErrorMessage(data, 'Could not load documents.'));
-                }
-                const docs = await res.json();
-                count.textContent = `${docs.length} doc${docs.length !== 1 ? 's' : ''}`;
-
-                if (!docs.length) {
-                    list.innerHTML = '<div class="empty-state">No documents yet. Add your first HR document below.</div>';
-                    return;
-                }
-                list.innerHTML = docs.map(doc => `
-                    <div class="doc-item">
-                        <div class="doc-item-info">
-                            <h3>${escapeHtml(doc.title)}</h3>
-                            <span>${doc.char_count} chars · ${new Date(doc.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <button class="doc-delete-btn" onclick="deleteDoc(${doc.id})" title="Delete">×</button>
-                    </div>
-                `).join('');
-            } catch (e) {
-                count.textContent = 'Error';
-                list.innerHTML = `<div class="empty-state">${escapeHtml(e.message || 'Error loading documents.')}</div>`;
-            }
-        }
-
-        async function deleteDoc(id) {
-            if (!confirm('Delete this document?')) return;
-            try {
-                const res = await fetch(`${getApiUrl()}/kb/${id}`, { method: 'DELETE', headers: authHeaders() });
-                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Error deleting document.'));
-                showMessage('Document deleted.', 'success');
-                loadDocuments();
-            } catch (e) {
-                showMessage(e.message || 'Error deleting document.', 'error');
-            }
-        }
-
-        document.getElementById('add-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.textContent = 'Adding...';
-
-            const data = {
-                title: document.getElementById('doc-title').value,
-                content: document.getElementById('doc-content').value,
-                source_url: document.getElementById('doc-url').value || undefined
-            };
-
-            try {
-                const res = await fetch(`${getApiUrl()}/kb/`, {
-                    method: 'POST',
-                    headers: authHeaders(),
-                    body: JSON.stringify(data)
-                });
-                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Add failed.'));
-                showMessage('Document added.', 'success');
-                e.target.reset();
-                loadDocuments();
-            } catch (e) {
-                showMessage(e.message || 'Error adding document.', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Add Document';
-            }
+          // Show the HR reply
+          const rRow = document.createElement('div');
+          rRow.className = 'msg-row';
+          rRow.style.animation = 'msg-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+          rRow.innerHTML = `
+            <div class="msg-avatar ai" style="background: var(--accent-soft); color: oklch(0.38 0.1 145);">HR</div>
+            <div class="msg-body">
+              <div class="sender">${escapeHtml(e.replier_name || 'HR Team')} · ${e.replied_at ? new Date(e.replied_at).toLocaleDateString() : ''}</div>
+              <div class="card-text">
+                <p>${escapeHtml(e.admin_reply).replace(/\n/g, '<br>')}</p>
+              </div>
+            </div>
+          `;
+          stream.appendChild(rRow);
         });
 
-        // ── Subscription ────────────────────────────────────────────────
-        const PLANS = [
-            { id: 'starter', name: 'Starter', price: 99, employees: 'up to 50' },
-            { id: 'growth',  name: 'Growth',  price: 299, employees: 'up to 200' },
-            { id: 'enterprise', name: 'Enterprise', price: 799, employees: 'unlimited' },
-        ];
+        scrollToBottom();
+      } catch {}
+    }
 
-        let selectedPlan = 'starter';
+    function getTimeOfDay() {
+      const h = new Date().getHours();
+      if (h < 12) return 'morning';
+      if (h < 17) return 'afternoon';
+      return 'evening';
+    }
 
-        async function loadSubscription() {
-            const statusArea = document.getElementById('sub-status-area');
-            const planSelector = document.getElementById('plan-selector');
-            const billingActions = document.getElementById('billing-actions');
+    function formatChars(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+      return String(n);
+    }
 
-            try {
-                const res = await fetch(`${getApiUrl()}/billing/status`, { headers: authHeaders() });
-                if (res.status === 404) {
-                    // No subscription yet — show plan selector
-                    renderPlanSelector();
-                    billingActions.innerHTML = `<button class="btn btn-primary" onclick="subscribe(this)">Subscribe Now</button>`;
-                    return;
-                }
-                if (res.status === 401) return redirectToLogin();
-                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Could not load subscription.'));
-                const sub = await res.json();
+    // ── Chat Logic ───────────────────────────────────────────────────────
+    const stream = document.getElementById('chat-stream');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
 
-                const badge = document.getElementById('sub-badge');
-                const badgeText = document.getElementById('sub-status-text');
-                badge.className = `sub-status-badge ${sub.status}`;
-                badgeText.textContent = sub.status.charAt(0).toUpperCase() + sub.status.slice(1);
+    function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+    function autoGrow(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+    function scrollToBottom() { stream.scrollTop = stream.scrollHeight; }
 
-                const details = document.getElementById('sub-details');
-                details.innerHTML = `
-                    ${sub.plan ? `<div class="sub-detail-row"><span class="label">Plan</span><span class="value">${sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1)}</span></div>` : ''}
-                    ${sub.price ? `<div class="sub-detail-row"><span class="label">Price</span><span class="value">$${sub.price}/mo</span></div>` : ''}
-                    ${sub.current_period_end ? `<div class="sub-detail-row"><span class="label">Renews</span><span class="value">${new Date(sub.current_period_end).toLocaleDateString()}</span></div>` : ''}
-                `;
+    function askQuestion(q) { chatInput.value = q; sendMessage(); }
 
-                if (sub.status === 'active' || sub.status === 'pending') {
-                    billingActions.innerHTML = `<button class="btn btn-danger" onclick="cancelSubscription(this)">Cancel Plan</button>`;
-                } else {
-                    renderPlanSelector();
-                    billingActions.innerHTML = `<button class="btn btn-primary" onclick="subscribe(this)">Resume Plan</button>`;
-                }
-            } catch (e) {
-                billingActions.innerHTML = `<button class="btn btn-ghost" onclick="loadSubscription()">Retry</button>`;
-                showMessage(e.message || 'Could not load subscription.', 'error');
-            }
+    function addUserMessage(text) {
+      const row = document.createElement('div');
+      row.className = 'msg-row user';
+      row.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      row.innerHTML = `<div class="msg-avatar human">${(currentUser?.full_name || 'U')[0].toUpperCase()}</div><div class="msg-body"><div class="card-user">${escapeHtml(text)}</div></div>`;
+      stream.appendChild(row);
+      scrollToBottom();
+    }
+
+    function addTyping() {
+      const row = document.createElement('div');
+      row.className = 'msg-row'; row.id = 'typing';
+      row.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      row.innerHTML = `<div class="msg-avatar ai">R</div><div class="msg-body"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+      stream.appendChild(row); scrollToBottom();
+    }
+
+    function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
+
+    function addAIResponse(text, source) {
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.style.animation = 'msg-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      const sourceHtml = source ? `<div class="source-cite">📄 ${escapeHtml(source)}</div>` : '';
+      row.innerHTML = `<div class="msg-avatar ai">R</div><div class="msg-body"><div class="card-text"><p>${text}</p>${sourceHtml}</div></div>`;
+      stream.appendChild(row); scrollToBottom();
+    }
+
+    function addFollowUps(suggestions) {
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards';
+      row.style.opacity = '0';
+      row.innerHTML = `<div class="msg-avatar ai" style="visibility:hidden">R</div><div class="msg-body"><div class="card-actions">${suggestions.map(s => `<button class="action-pill" onclick="askQuestion('${escapeHtml(s)}')">${escapeHtml(s)}</button>`).join('')}</div></div>`;
+      stream.appendChild(row); scrollToBottom();
+    }
+
+    async function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text || isLoading) return;
+      isLoading = true;
+      chatInput.value = ''; chatInput.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      addUserMessage(text);
+      addTyping();
+
+      try {
+        const res = await fetch(`${getApiUrl()}/chat/ask`, {
+          method: 'POST', headers: authHeaders(), body: JSON.stringify({ question: text })
+        });
+        removeTyping();
+
+        if (res.status === 401) return redirectToLogin();
+        if (res.status === 402) {
+          addAIResponse('Your subscription needs to be active to use the chat. Head to <strong>Settings → Subscription</strong> to activate.', null);
+          addFollowUps(['Open settings']);
+          isLoading = false; sendBtn.disabled = false; return;
+        }
+        if (!res.ok) {
+          const err = await readJsonSafe(res);
+          addAIResponse(getErrorMessage(err, 'Something went wrong. Try again.'), null);
+          isLoading = false; sendBtn.disabled = false; return;
         }
 
-        function renderPlanSelector() {
-            const container = document.getElementById('plan-cards');
-            container.innerHTML = PLANS.map(p => `
-                <div class="plan-card ${p.id === selectedPlan ? 'selected' : ''}" onclick="selectPlan('${p.id}')" id="plan-${p.id}" tabindex="0" role="button" aria-pressed="${p.id === selectedPlan}" onkeydown="if(event.key==='Enter'||event.key===' ')selectPlan('${p.id}')">
-                    <div class="plan-name">${p.name}</div>
-                    <div class="plan-price">$${p.price}</div>
-                    <div class="plan-employees">${p.employees} employees</div>
-                </div>
-            `).join('');
-            document.getElementById('plan-selector').style.display = 'block';
+        const data = await res.json();
+        const answer = data.answer || 'No answer returned.';
+        const sources = data.sources || [];
+        const sourceTitle = sources.length > 0 ? sources[0].title : null;
+        addAIResponse(answer.replace(/\n/g, '<br>'), sourceTitle);
+
+        // Show escalation notice if flagged
+        if (data.escalated) {
+          addAIResponse('I\'ve flagged this question for your HR team. They\'ll reply within the platform.', null);
         }
 
-        function selectPlan(id) {
-            selectedPlan = id;
-            document.querySelectorAll('.plan-card').forEach(el => {
-                el.classList.toggle('selected', el.id === `plan-${id}`);
-                el.setAttribute('aria-pressed', el.id === `plan-${id}`);
-            });
+        // Use follow-ups from the AI response
+        const followUps = data.follow_ups || [];
+        if (followUps.length > 0) {
+          addFollowUps(followUps);
         }
 
-        async function subscribe(btn) {
-            btn.disabled = true;
-            const original = btn.textContent;
-            btn.textContent = 'Redirecting to PayPal...';
+        // Refresh escalation badge
+        loadEscalations();
+      } catch (e) {
+        removeTyping();
+        addAIResponse('Connection error. Check your network and try again.', null);
+      }
 
-            try {
-                const res = await fetch(`${getApiUrl()}/billing/subscribe`, {
-                    method: 'POST',
-                    headers: authHeaders(),
-                    body: JSON.stringify({ plan: selectedPlan })
-                });
-                const data = await readJsonSafe(res);
-                if (!res.ok) throw new Error(getErrorMessage(data, 'Subscribe failed.'));
-                window.location.href = data.approval_url;
-            } catch (e) {
-                showMessage(e.message || 'Could not start subscription.', 'error');
-                btn.disabled = false;
-                btn.textContent = original;
-            }
+      isLoading = false; sendBtn.disabled = false; chatInput.focus();
+    }
+
+    // ── Settings Rendering ───────────────────────────────────────────────
+    function renderSettings() {
+      renderSettingsDocs();
+      renderSettingsTeam();
+      renderSettingsBilling();
+      renderWorkspace();
+      renderProfile();
+      setupUpload();
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ── Add tabs ──
+    function switchAddTab(tab) {
+      document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+      document.getElementById('tab-url').classList.toggle('active', tab === 'url');
+      document.getElementById('upload-form').style.display = tab === 'upload' ? 'block' : 'none';
+      document.getElementById('url-form').style.display = tab === 'url' ? 'block' : 'none';
+    }
+
+    // ── File upload ──
+    let selectedFile = null;
+
+    function setupUpload() {
+      const zone = document.getElementById('drop-zone');
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault(); zone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+      });
+    }
+
+    function handleFileSelect(input) {
+      if (input.files.length) handleFile(input.files[0]);
+    }
+
+    function handleFile(file) {
+      selectedFile = file;
+      const zone = document.getElementById('drop-zone');
+      zone.classList.add('has-file');
+      document.getElementById('drop-zone-content').innerHTML = `<span style="font-weight:500; color: var(--ink);">${escapeHtml(file.name)}</span><span class="drop-hint">${(file.size / 1024).toFixed(0)} KB</span>`;
+      document.getElementById('upload-btn').disabled = false;
+      // Auto-fill title from filename
+      const titleInput = document.getElementById('upload-title');
+      if (!titleInput.value) {
+        titleInput.value = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      }
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedFile) return;
+      const btn = document.getElementById('upload-btn');
+      btn.disabled = true; btn.textContent = 'Processing...';
+
+      const formData = new FormData();
+      formData.append('title', document.getElementById('upload-title').value);
+      formData.append('file', selectedFile);
+
+      try {
+        const res = await fetch(`${getApiUrl()}/kb/upload`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${getToken()}` },
+          body: formData
+        });
+        if (!res.ok) { const d = await readJsonSafe(res); throw new Error(getErrorMessage(d, 'Upload failed')); }
+        const newDoc = await res.json();
+        documents.push(newDoc);
+        renderSettingsDocs();
+        showToast(`"${newDoc.title}" added · ${formatChars(newDoc.char_count)} extracted`);
+        // Reset
+        selectedFile = null;
+        e.target.reset();
+        document.getElementById('drop-zone').classList.remove('has-file');
+        document.getElementById('drop-zone-content').innerHTML = '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg><span>Drop a file here or click to browse</span><span class="drop-hint">PDF, TXT, or Markdown · Max 10MB</span>';
+      } catch (err) { showToast(err.message); }
+      btn.disabled = false; btn.textContent = 'Upload & process';
+    });
+
+    document.getElementById('url-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('url-btn');
+      btn.disabled = true; btn.textContent = 'Importing...';
+      try {
+        const res = await fetch(`${getApiUrl()}/kb/import-url`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ title: document.getElementById('url-title').value, url: document.getElementById('url-input').value })
+        });
+        if (!res.ok) { const d = await readJsonSafe(res); throw new Error(getErrorMessage(d, 'Import failed')); }
+        const newDoc = await res.json();
+        documents.push(newDoc);
+        renderSettingsDocs();
+        showToast(`"${newDoc.title}" imported · ${formatChars(newDoc.char_count)} extracted`);
+        e.target.reset();
+      } catch (err) { showToast(err.message); }
+      btn.disabled = false; btn.textContent = 'Import from URL';
+    });
+
+    // ── Documents list ──
+    function renderSettingsDocs() {
+      const el = document.getElementById('settings-docs');
+      if (!documents.length) {
+        el.innerHTML = '<div class="empty-state">No documents yet. Upload a file or import from a URL above.</div>';
+        return;
+      }
+      const icons = ['📋', '📄', '📑', '📃', '📝'];
+      el.innerHTML = documents.map((d, i) => `
+        <div class="doc-item" id="doc-${d.id}" onclick="reviewDoc(${d.id})" style="cursor:pointer;">
+          <div class="doc-icon">${icons[i % icons.length]}</div>
+          <div class="doc-info">
+            <div class="doc-name">${escapeHtml(d.title)}</div>
+            <div class="doc-meta">${formatChars(d.char_count)}${d.source_url ? ' · from URL' : ' · uploaded'} · ${new Date(d.created_at).toLocaleDateString()}</div>
+          </div>
+          <button class="doc-remove" onclick="event.stopPropagation(); deleteDoc(${d.id})" title="Remove">×</button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteDoc(id) {
+      const item = document.getElementById(`doc-${id}`);
+      if (item) { item.classList.add('removing'); }
+      await new Promise(r => setTimeout(r, 250));
+      try {
+        const res = await fetch(`${getApiUrl()}/kb/${id}`, { method: 'DELETE', headers: authHeaders() });
+        if (!res.ok) throw new Error('Delete failed');
+        documents = documents.filter(d => d.id !== id);
+        renderSettingsDocs();
+        showToast('Document removed');
+      } catch { if (item) item.classList.remove('removing'); }
+    }
+
+    // ── Document Review ──
+    async function reviewDoc(id) {
+      const panel = document.getElementById('doc-review');
+      const body = document.getElementById('review-body');
+      const title = document.getElementById('review-title');
+      const meta = document.getElementById('review-meta');
+      const stats = document.getElementById('review-stats');
+
+      // Show panel with loading state
+      panel.classList.add('open');
+      body.innerHTML = '<div class="doc-review-loading">Loading extracted content...</div>';
+      title.textContent = 'Loading...';
+      meta.innerHTML = '';
+      stats.innerHTML = '';
+
+      try {
+        const res = await fetch(`${getApiUrl()}/kb/${id}`, { headers: authHeaders() });
+        if (!res.ok) throw new Error('Could not load document');
+        const doc = await res.json();
+
+        title.textContent = doc.title;
+        meta.innerHTML = `
+          <span>${formatChars(doc.char_count)} characters</span>
+          <span>${doc.source_url ? 'Imported from URL' : 'Uploaded file'}</span>
+          <span>Added ${new Date(doc.created_at).toLocaleDateString()}</span>
+        `;
+
+        // Show content with line count and word count
+        const content = doc.content || '';
+        const lines = content.split('\n').length;
+        const words = content.split(/\s+/).filter(w => w.length > 0).length;
+        const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim().length > 0).length;
+
+        body.innerHTML = `<div class="doc-review-content">${escapeHtml(content)}</div>`;
+
+        stats.innerHTML = `
+          <span><strong>${words.toLocaleString()}</strong> words</span>
+          <span><strong>${lines.toLocaleString()}</strong> lines</span>
+          <span><strong>${paragraphs}</strong> paragraphs</span>
+          <span><strong>${formatChars(doc.char_count)}</strong> chars</span>
+          ${doc.source_url ? `<span>Source: <a href="${escapeHtml(doc.source_url)}" target="_blank" style="color: var(--brand-text);">${escapeHtml(doc.source_url.substring(0, 40))}...</a></span>` : ''}
+        `;
+      } catch (err) {
+        body.innerHTML = `<div class="doc-review-loading" style="color: var(--danger);">Failed to load document content.</div>`;
+      }
+    }
+
+    function closeReview() {
+      document.getElementById('doc-review').classList.remove('open');
+    }
+
+    // ── Workspace ──
+    let tenantData = null;
+
+    async function renderWorkspace() {
+      try {
+        const res = await fetch('/auth/tenant', { headers: authHeaders() });
+        if (res.ok) {
+          tenantData = await res.json();
+          document.getElementById('ws-name').value = tenantData.name || '';
+          document.getElementById('ws-slug').value = tenantData.slug || '';
+        }
+      } catch {}
+      // Disable for non-owners
+      if (!currentUser.is_owner) {
+        document.getElementById('workspace-form').querySelectorAll('input, button').forEach(el => el.disabled = true);
+      }
+    }
+
+    document.getElementById('workspace-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('ws-btn');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const res = await fetch('/auth/tenant', {
+          method: 'PATCH', headers: authHeaders(),
+          body: JSON.stringify({ name: document.getElementById('ws-name').value, slug: document.getElementById('ws-slug').value })
+        });
+        if (!res.ok) { const d = await readJsonSafe(res); throw new Error(getErrorMessage(d, 'Update failed')); }
+        const updated = await res.json();
+        if (updated.slug !== getTenant()) {
+          localStorage.setItem(TENANT_KEY, updated.slug);
+          showToast('Workspace updated. Redirecting...');
+          setTimeout(() => window.location.href = `/${updated.slug}/dashboard`, 1000);
+          return;
+        }
+        showToast('Workspace updated');
+      } catch (err) { showToast(err.message); }
+      btn.disabled = false; btn.textContent = 'Save changes';
+    });
+
+    // ── Profile ──
+    function renderProfile() {
+      document.getElementById('profile-name').value = currentUser.full_name || '';
+      document.getElementById('profile-email').value = currentUser.email || '';
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('profile-btn');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const res = await fetch('/auth/me', {
+          method: 'PATCH', headers: authHeaders(),
+          body: JSON.stringify({ full_name: document.getElementById('profile-name').value, email: document.getElementById('profile-email').value })
+        });
+        if (!res.ok) { const d = await readJsonSafe(res); throw new Error(getErrorMessage(d, 'Update failed')); }
+        const updated = await res.json();
+        currentUser.full_name = updated.full_name;
+        currentUser.email = updated.email;
+        document.getElementById('user-name').textContent = updated.full_name || updated.email;
+        showToast('Profile updated');
+      } catch (err) { showToast(err.message); }
+      btn.disabled = false; btn.textContent = 'Update profile';
+    });
+
+    // ── Team ──
+    let teamMembers = [];
+
+    async function renderSettingsTeam() {
+      const el = document.getElementById('settings-team');
+      if (!currentUser.is_owner) {
+        // Non-owners just see themselves
+        el.innerHTML = `
+          <div class="team-member" style="cursor:pointer;" onclick="openOwnProfile()">
+            <div class="team-avatar">${(currentUser.full_name || 'U')[0].toUpperCase()}</div>
+            <div class="team-info"><div class="team-name">${escapeHtml(currentUser.full_name || currentUser.email)}</div><div class="team-email">${escapeHtml(currentUser.email)}</div></div>
+          </div>
+        `;
+        return;
+      }
+
+      // Owners: load full team
+      try {
+        const res = await fetch('/auth/team', { headers: authHeaders() });
+        if (res.ok) teamMembers = await res.json();
+      } catch {}
+
+      if (!teamMembers.length) {
+        el.innerHTML = '<div class="empty-state">No team members found.</div>';
+        return;
+      }
+
+      el.innerHTML = teamMembers.map(m => `
+        <div class="team-member" style="cursor:pointer; margin-bottom: 8px;" onclick="openUserPanel(${m.id})">
+          <div class="team-avatar">${(m.full_name || m.email)[0].toUpperCase()}</div>
+          <div class="team-info">
+            <div class="team-name">${escapeHtml(m.full_name)}${m.is_owner ? ' <span class="team-badge">Owner</span>' : ''}</div>
+            <div class="team-email">${escapeHtml(m.email)}</div>
+          </div>
+          ${m.pending_escalations > 0 ? `<span style="background: var(--warm-soft); color: var(--warm); font-size:11px; font-weight:600; padding:3px 8px; border-radius:100px; flex-shrink:0;">${m.pending_escalations} pending</span>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function openOwnProfile() {
+      const section = document.getElementById('profile-section');
+      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function openUserPanel(userId) {
+      const member = teamMembers.find(m => m.id === userId);
+      if (!member) return;
+
+      const panel = document.getElementById('user-panel');
+      const title = document.getElementById('user-panel-title');
+      const meta = document.getElementById('user-panel-meta');
+      const body = document.getElementById('user-panel-body');
+
+      title.textContent = member.full_name || member.email;
+      meta.innerHTML = `<span>${escapeHtml(member.email)}</span><span>Joined ${new Date(member.created_at).toLocaleDateString()}</span>${member.is_owner ? '<span>Owner</span>' : ''}`;
+
+      // Get this user's pending escalations
+      const userEscalations = escalations.filter(e => e.user_email === member.email);
+      const pending = userEscalations.filter(e => e.status === 'pending');
+      const replied = userEscalations.filter(e => e.status === 'replied');
+
+      let html = '';
+
+      // Actions
+      html += `<div style="display:flex; gap:8px; flex-wrap:wrap;">`;
+      if (!member.is_owner && currentUser.is_owner) {
+        html += `<button class="kb-suggest-btn" onclick="resendInvite('${escapeHtml(member.email)}')">Resend invite</button>`;
+        html += `<button class="kb-suggest-btn" onclick="toggleAdmin(${member.id}, true)">Make admin</button>`;
+      }
+      if (member.is_owner && !member.id !== currentUser.id && currentUser.is_owner && member.id !== currentUser.id) {
+        html += `<button class="kb-suggest-btn" style="background:var(--warm-soft); color:var(--warm);" onclick="toggleAdmin(${member.id}, false)">Remove admin</button>`;
+      }
+      if (member.id === currentUser.id) {
+        html += `<button class="kb-suggest-btn" onclick="closeUserPanel(); openOwnProfile();">Edit profile</button>`;
+      }
+      html += `</div>`;
+
+      // Pending questions
+      if (pending.length > 0) {
+        html += `<div><strong style="font-size:12px; color:var(--warm); text-transform:uppercase; letter-spacing:0.04em;">${pending.length} Pending question${pending.length > 1 ? 's' : ''}</strong>`;
+        html += pending.map(e => `
+          <div class="esc-item" style="margin-top:10px;" onclick="closeUserPanel(); openEscPanel(${e.id});">
+            <div class="esc-question">${escapeHtml(e.question)}</div>
+            <div class="esc-from">${new Date(e.created_at).toLocaleDateString()}</div>
+            ${e.ai_partial_answer ? `<div class="esc-ai-hint">AI: ${escapeHtml(e.ai_partial_answer.substring(0, 80))}...</div>` : ''}
+          </div>
+        `).join('');
+        html += `</div>`;
+      }
+
+      // Replied questions
+      if (replied.length > 0) {
+        html += `<div><strong style="font-size:12px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.04em;">Replied (${replied.length})</strong>`;
+        html += replied.slice(0, 5).map(e => `
+          <div style="margin-top:10px; padding:12px; background:var(--surface-sunken); border-radius:var(--radius-md);">
+            <div style="font-size:13px; font-weight:500; color:var(--ink); margin-bottom:4px;">${escapeHtml(e.question)}</div>
+            <div style="font-size:12px; color:var(--ink-soft); line-height:1.5;">${escapeHtml((e.admin_reply || '').substring(0, 120))}${(e.admin_reply || '').length > 120 ? '...' : ''}</div>
+          </div>
+        `).join('');
+        html += `</div>`;
+      }
+
+      if (!pending.length && !replied.length) {
+        html += `<div class="empty-state">No escalated questions from this user.</div>`;
+      }
+
+      body.innerHTML = html;
+      panel.classList.add('open');
+    }
+
+    function closeUserPanel() {
+      document.getElementById('user-panel').classList.remove('open');
+    }
+
+    async function resendInvite(email) {
+      try {
+        const res = await fetch('/auth/invite', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ email }) });
+        const data = await res.json();
+        if (res.status === 409) {
+          showToast('User already registered');
+        } else if (res.ok) {
+          showToast(`New invite sent. Password: ${data.temp_password}`);
+        } else {
+          showToast('Could not resend invite');
+        }
+      } catch { showToast('Failed to resend'); }
+    }
+
+    async function toggleAdmin(userId, makeAdmin) {
+      try {
+        const res = await fetch(`/auth/team/${userId}/role`, {
+          method: 'PATCH', headers: authHeaders(),
+          body: JSON.stringify({ is_owner: makeAdmin })
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast(makeAdmin ? 'User promoted to admin' : 'Admin access removed');
+        closeUserPanel();
+        renderSettingsTeam();
+      } catch { showToast('Could not update role'); }
+    }
+
+    // Close panels on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeUserPanel(); closeEscPanel(); closeReview(); closeHistory(); }
+    });
+
+    // ── Chat History ─────────────────────────────────────────────────────
+    let searchTimeout = null;
+
+    async function openHistory() {
+      document.getElementById('history-panel').classList.add('open');
+      document.getElementById('history-search').value = '';
+      await loadHistory();
+    }
+
+    function closeHistory() {
+      document.getElementById('history-panel').classList.remove('open');
+    }
+
+    function debounceSearch(query) {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        if (query.trim().length >= 2) {
+          searchHistory(query.trim());
+        } else {
+          loadHistory();
+        }
+      }, 300);
+    }
+
+    async function loadHistory() {
+      const body = document.getElementById('history-body');
+      body.innerHTML = '<div class="doc-review-loading">Loading...</div>';
+      try {
+        const res = await fetch(`${getApiUrl()}/chat/history?limit=100`, { headers: authHeaders() });
+        if (!res.ok) throw new Error('Failed');
+        const messages = await res.json();
+        renderHistory(messages);
+      } catch {
+        body.innerHTML = '<div class="empty-state">Could not load history.</div>';
+      }
+    }
+
+    async function searchHistory(query) {
+      const body = document.getElementById('history-body');
+      body.innerHTML = '<div class="doc-review-loading">Searching...</div>';
+      try {
+        const res = await fetch(`${getApiUrl()}/chat/search?q=${encodeURIComponent(query)}&limit=50`, { headers: authHeaders() });
+        if (!res.ok) throw new Error('Failed');
+        const messages = await res.json();
+        if (!messages.length) {
+          body.innerHTML = `<div class="empty-state">No results for "${escapeHtml(query)}"</div>`;
+          return;
+        }
+        renderHistory(messages, query);
+      } catch {
+        body.innerHTML = '<div class="empty-state">Search failed.</div>';
+      }
+    }
+
+    function renderHistory(messages, highlight = null) {
+      const body = document.getElementById('history-body');
+      if (!messages.length) {
+        body.innerHTML = '<div class="empty-state">No chat history yet. Start a conversation!</div>';
+        return;
+      }
+
+      // Group messages into conversation pairs (user question + ai answer)
+      const conversations = [];
+      for (let i = 0; i < messages.length; i++) {
+        if (messages[i].role === 'user') {
+          const pair = { question: messages[i], answer: null, time: messages[i].created_at };
+          if (i + 1 < messages.length && messages[i + 1].role === 'ai') {
+            pair.answer = messages[i + 1];
+            i++;
+          }
+          conversations.push(pair);
+        }
+      }
+
+      body.innerHTML = conversations.map(conv => {
+        const q = conv.question.content;
+        const a = conv.answer ? conv.answer.content.substring(0, 150) : '';
+        const date = new Date(conv.time).toLocaleDateString();
+        const time = new Date(conv.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        let qDisplay = escapeHtml(q);
+        let aDisplay = escapeHtml(a);
+        if (highlight) {
+          const re = new RegExp(`(${escapeHtml(highlight)})`, 'gi');
+          qDisplay = qDisplay.replace(re, '<mark style="background:var(--warm-soft); padding:1px 2px; border-radius:2px;">$1</mark>');
+          aDisplay = aDisplay.replace(re, '<mark style="background:var(--warm-soft); padding:1px 2px; border-radius:2px;">$1</mark>');
         }
 
-        async function cancelSubscription(btn) {
-            if (!confirm('Cancel your subscription?')) return;
-            btn.disabled = true;
-            const original = btn.textContent;
-            btn.textContent = 'Cancelling...';
-            try {
-                const res = await fetch(`${getApiUrl()}/billing/cancel`, { method: 'POST', headers: authHeaders() });
-                if (!res.ok) throw new Error(getErrorMessage(await readJsonSafe(res), 'Cancel failed.'));
-                showMessage('Subscription cancelled.', 'success');
-                loadSubscription();
-            } catch (e) {
-                showMessage(e.message || 'Error cancelling.', 'error');
-                btn.disabled = false;
-                btn.textContent = original;
-            }
+        return `
+          <div style="padding:12px 0; border-bottom:1px solid var(--border-light); cursor:pointer;" onclick="replayFromHistory('${escapeHtml(q).replace(/'/g, "\\'")}')">
+            <div style="font-size:13px; font-weight:500; color:var(--ink); line-height:1.4;">${qDisplay}</div>
+            ${a ? `<div style="font-size:12px; color:var(--ink-muted); margin-top:4px; line-height:1.5;">${aDisplay}${conv.answer.content.length > 150 ? '...' : ''}</div>` : ''}
+            <div style="font-size:11px; color:var(--ink-muted); margin-top:6px; opacity:0.7;">${date} · ${time}${conv.answer?.source_title ? ' · ' + escapeHtml(conv.answer.source_title) : ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function replayFromHistory(question) {
+      closeHistory();
+      showSection('chat');
+      chatInput.value = question;
+      chatInput.focus();
+    }
+
+    async function inviteMember() {
+      const emailInput = document.getElementById('invite-email');
+      const result = document.getElementById('invite-result');
+      const btn = document.getElementById('invite-btn');
+      const email = emailInput.value.trim();
+      if (!email) { result.textContent = 'Enter an email address.'; result.style.color = 'var(--danger)'; return; }
+      btn.disabled = true; btn.textContent = 'Inviting...';
+      try {
+        const res = await fetch('/auth/invite', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ email }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(getErrorMessage(data, 'Invite failed'));
+        result.style.color = 'var(--accent)';
+        result.innerHTML = `Invited! Temp password: <code style="background:var(--surface-sunken);padding:2px 6px;border-radius:4px;font-size:12px;">${escapeHtml(data.temp_password)}</code>`;
+        emailInput.value = '';
+        showToast('Invitation sent');
+      } catch (e) { result.textContent = e.message; result.style.color = 'var(--danger)'; }
+      btn.disabled = false; btn.textContent = 'Invite';
+    }
+
+    // ── Billing (de-emphasized) ──
+    function renderSettingsBilling() {
+      const el = document.getElementById('settings-billing');
+      el.innerHTML = `
+        <div class="sub-status">
+          <div class="sub-dot ${subscription?.status === 'active' ? 'active' : 'inactive'}"></div>
+          <div class="sub-info">
+            <div class="sub-plan">${subscription ? (subscription.plan || 'Plan') : 'Trial mode'}</div>
+            <div class="sub-detail">${subscription?.status === 'active' ? 'Active' : 'No subscription required during trial'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Escalations ──────────────────────────────────────────────────────
+    let escalations = [];
+
+    async function loadEscalations() {
+      try {
+        const res = await fetch(`${getApiUrl()}/escalations/`, { headers: authHeaders() });
+        if (!res.ok) return;
+        escalations = await res.json();
+        renderEscalations();
+        updateEscBadge();
+      } catch {}
+    }
+
+    function updateEscBadge() {
+      let count;
+      if (currentUser.is_owner) {
+        count = escalations.filter(e => e.status === 'pending').length;
+      } else {
+        count = escalations.filter(e => e.status === 'replied' && !e.read_by_user).length;
+      }
+      const badge = document.getElementById('esc-badge');
+      if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function renderEscalations() {
+      const el = document.getElementById('escalations-list');
+      const titleEl = document.getElementById('inbox-title');
+      const hintEl = document.getElementById('inbox-hint');
+
+      if (currentUser.is_owner) {
+        // Admin view: show all pending questions to reply to
+        titleEl.textContent = 'Inbox';
+        hintEl.textContent = 'Questions the AI couldn\'t answer. Reply here — users see your response in their chat.';
+
+        if (!escalations.length) {
+          el.innerHTML = '<div class="empty-state">No escalated questions yet. When the AI can\'t answer, it appears here.</div>';
+          return;
+        }
+        el.innerHTML = escalations.map(e => `
+          <div class="esc-item" onclick="openEscPanel(${e.id})">
+            <div class="esc-question">${escapeHtml(e.question)}</div>
+            <div class="esc-from">
+              From ${escapeHtml(e.user_name)} · ${new Date(e.created_at).toLocaleDateString()}
+              <span class="esc-status ${e.status}">${e.status}</span>
+            </div>
+            ${e.ai_partial_answer ? `<div class="esc-ai-hint">AI said: ${escapeHtml(e.ai_partial_answer.substring(0, 120))}${e.ai_partial_answer.length > 120 ? '...' : ''}</div>` : ''}
+          </div>
+        `).join('');
+      } else {
+        // Regular user view: show their questions and HR replies
+        titleEl.textContent = 'My Questions';
+        hintEl.textContent = 'Questions forwarded to HR. Replies show up in your chat.';
+
+        if (!escalations.length) {
+          el.innerHTML = '<div class="empty-state">No forwarded questions. When the AI can\'t answer something, HR will reply in your chat.</div>';
+          return;
         }
 
-        // ── Team ─────────────────────────────────────────────────────────
-        async function loadTeam() {
-            const list = document.getElementById('team-list');
-            // Only owners can see team — but we don't have a team endpoint yet
-            // For now show the current user only
-            try {
-                const meRes = await fetch('/auth/me', { headers: { 'Authorization': `Bearer ${getToken()}` } });
-                if (!meRes.ok) throw new Error(getErrorMessage(await readJsonSafe(meRes), 'Could not load team.'));
-                const me = await meRes.json();
-                list.innerHTML = `
-                    <div class="team-member">
-                        <div class="member-avatar">${(me.full_name || me.email).charAt(0).toUpperCase()}</div>
-                        <div class="member-info">
-                            <div class="member-name">${escapeHtml(me.full_name || '—')}</div>
-                            <div class="member-email">${escapeHtml(me.email || '')}</div>
-                        </div>
-                        ${me.is_owner ? '<span class="owner-badge">Owner</span>' : ''}
-                    </div>
-                `;
-            } catch (e) {
-                list.innerHTML = '<div class="empty-state">Could not load team.</div>';
-            }
+        const pending = escalations.filter(e => e.status === 'pending');
+        const replied = escalations.filter(e => e.status === 'replied');
+
+        let html = '';
+
+        if (replied.length > 0) {
+          const unread = replied.filter(e => !e.read_by_user);
+          html += `<p style="font-size:12px; font-weight:500; color:var(--accent); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px;">${unread.length > 0 ? unread.length + ' new' : replied.length} repl${replied.length > 1 ? 'ies' : 'y'}</p>`;
+          html += replied.map(e => `
+            <div class="esc-item" style="cursor:pointer; ${!e.read_by_user ? 'border-color: oklch(0.65 0.15 145 / 0.3);' : ''}" onclick="markReadAndGoToChat(${e.id})">
+              <div class="esc-question">${escapeHtml(e.question)}</div>
+              <div class="esc-from">
+                Answered by ${escapeHtml(e.replier_name || 'HR')} · ${e.replied_at ? new Date(e.replied_at).toLocaleDateString() : ''}
+                <span class="esc-status replied">answered</span>
+                ${!e.read_by_user ? '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-left:6px;"></span>' : ''}
+              </div>
+              <div style="font-size:12px; color:var(--brand-text); margin-top:6px;">View in chat →</div>
+            </div>
+          `).join('');
         }
 
-        async function inviteMember() {
-            const emailInput = document.getElementById('invite-email');
-            const result = document.getElementById('invite-result');
-            const btn = document.getElementById('invite-btn');
-            const email = emailInput.value.trim();
-            if (!email || !emailInput.checkValidity()) {
-                result.style.color = '#991B1B';
-                result.textContent = 'Enter a valid email address.';
-                return;
-            }
-            btn.disabled = true;
-            btn.textContent = 'Inviting...';
-
-            try {
-                const res = await fetch('/auth/invite', {
-                    method: 'POST',
-                    headers: authHeaders(),
-                    body: JSON.stringify({ email })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(getErrorMessage(data, 'Invite failed.'));
-
-                result.style.color = '#065F46';
-                result.innerHTML = `Invited. Temp password: <code style="background:#F3F4F6;padding:2px 6px;border-radius:4px;">${escapeHtml(data.temp_password)}</code> - share securely with ${escapeHtml(email)}.`;
-                emailInput.value = '';
-                loadTeam();
-            } catch (e) {
-                result.style.color = '#991B1B';
-                result.textContent = e.message;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Invite';
-            }
+        if (pending.length > 0) {
+          html += `<p style="font-size:12px; font-weight:500; color:var(--warm); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:12px; ${replied.length ? 'margin-top:24px;' : ''}">Waiting for HR (${pending.length})</p>`;
+          html += pending.map(e => `
+            <div class="esc-item" style="cursor:default; opacity:0.8;">
+              <div class="esc-question">${escapeHtml(e.question)}</div>
+              <div class="esc-from">Asked ${new Date(e.created_at).toLocaleDateString()} <span class="esc-status pending">pending</span></div>
+            </div>
+          `).join('');
         }
 
-        // ── Chat ─────────────────────────────────────────────────────────
-        const chatMessages = document.getElementById('chat-messages');
+        el.innerHTML = html;
+      }
+    }
 
-        async function sendChat() {
-            const input = document.getElementById('chat-input');
-            const loading = document.getElementById('chat-loading');
-            const btn = document.getElementById('chat-send-btn');
-            const question = input.value.trim();
-            if (!question) return;
+    let currentEscId = null;
 
-            if (chatMessages.querySelector('.empty-state')) chatMessages.innerHTML = '';
-            appendChat(question, 'user');
-            input.value = '';
-            loading.style.display = 'block';
-            input.disabled = true;
-            btn.disabled = true;
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+    function openEscPanel(id) {
+      const esc = escalations.find(e => e.id === id);
+      if (!esc) return;
+      currentEscId = id;
 
-            try {
-                const res = await fetch(`${getApiUrl()}/chat/ask`, {
-                    method: 'POST',
-                    headers: authHeaders(),
-                    body: JSON.stringify({ question })
-                });
-                const data = await readJsonSafe(res);
-                loading.style.display = 'none';
+      const panel = document.getElementById('esc-panel');
+      const title = document.getElementById('esc-panel-title');
+      const meta = document.getElementById('esc-panel-meta');
+      const body = document.getElementById('esc-panel-body');
 
-                if (res.status === 401) return redirectToLogin();
-                if (!res.ok) throw new Error(getErrorMessage(data, 'Ask failed.'));
+      title.textContent = esc.user_name || 'Employee';
+      meta.innerHTML = `<span>${escapeHtml(esc.user_email || '')}</span><span>${new Date(esc.created_at).toLocaleDateString()}</span>`;
 
-                appendChat(data.answer || 'No answer returned.', 'ai');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            } catch (e) {
-                loading.style.display = 'none';
-                appendChat(e.message || 'Could not send message.', 'error');
-            } finally {
-                input.disabled = false;
-                btn.disabled = false;
-                input.focus();
-            }
+      if (esc.status === 'replied') {
+        body.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="msg-row user" style="opacity:1; transform:none; animation:none;">
+              <div class="msg-avatar human">${(esc.user_name || 'U')[0].toUpperCase()}</div>
+              <div class="msg-body"><div class="card-user">${escapeHtml(esc.question)}</div></div>
+            </div>
+            ${esc.ai_partial_answer ? `
+            <div class="msg-row" style="opacity:1; transform:none; animation:none;">
+              <div class="msg-avatar ai">R</div>
+              <div class="msg-body"><div class="card-text"><p style="font-size:13px; color:var(--ink-muted);">${escapeHtml(esc.ai_partial_answer)}</p><div class="source-cite" style="background:var(--warm-soft); color:var(--warm);">AI couldn't fully answer</div></div></div>
+            </div>` : ''}
+            <div class="msg-row" style="opacity:1; transform:none; animation:none;">
+              <div class="msg-avatar ai" style="background: var(--accent-soft); color: oklch(0.38 0.1 145);">HR</div>
+              <div class="msg-body">
+                <div class="sender">${escapeHtml(esc.replier_name || 'You')} · replied</div>
+                <div class="card-text"><p>${escapeHtml(esc.admin_reply)}</p></div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        body.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="msg-row user" style="opacity:1; transform:none; animation:none;">
+              <div class="msg-avatar human">${(esc.user_name || 'U')[0].toUpperCase()}</div>
+              <div class="msg-body"><div class="card-user">${escapeHtml(esc.question)}</div></div>
+            </div>
+            ${esc.ai_partial_answer ? `
+            <div class="msg-row" style="opacity:1; transform:none; animation:none;">
+              <div class="msg-avatar ai">R</div>
+              <div class="msg-body"><div class="card-text"><p style="font-size:13px; color:var(--ink-muted);">${escapeHtml(esc.ai_partial_answer)}</p><div class="source-cite" style="background:var(--warm-soft); color:var(--warm);">AI couldn't fully answer</div></div></div>
+            </div>` : ''}
+            <div style="border-top: 1px solid var(--border-light); padding-top:16px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <strong style="font-size:12px; color: var(--ink-muted); text-transform:uppercase; letter-spacing:0.04em;">Your reply</strong>
+                <button class="kb-suggest-btn" onclick="getKBSuggestion()">✨ Ask KB for help</button>
+              </div>
+              <textarea class="reply-textarea" id="esc-reply-input" placeholder="Type your reply — the employee will see this in their chat..."></textarea>
+              <div id="kb-suggestion-area"></div>
+              <div class="form-actions" style="margin-top:12px;">
+                <button class="btn-primary" onclick="submitEscReply()">Send reply to employee</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      panel.classList.add('open');
+    }
+
+    function closeEscPanel() {
+      document.getElementById('esc-panel').classList.remove('open');
+      currentEscId = null;
+    }
+
+    async function markReadAndGoToChat(escalationId) {
+      // Mark as read in backend
+      try {
+        await fetch(`${getApiUrl()}/escalations/${escalationId}/read`, { method: 'POST', headers: authHeaders() });
+      } catch {}
+      // Update local state
+      const esc = escalations.find(e => e.id === escalationId);
+      if (esc) esc.read_by_user = true;
+      updateEscBadge();
+      renderEscalations();
+      // Switch to chat and scroll to bottom where HR replies are
+      showSection('chat');
+      setTimeout(scrollToBottom, 100);
+    }
+
+    async function getKBSuggestion() {
+      const esc = escalations.find(e => e.id === currentEscId);
+      if (!esc) return;
+      const area = document.getElementById('kb-suggestion-area');
+      area.innerHTML = '<p style="font-size:12px; color: var(--ink-muted); padding:8px 0;">Searching knowledge base...</p>';
+
+      try {
+        const res = await fetch(`${getApiUrl()}/escalations/${currentEscId}/kb-assist`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ question: esc.question })
+        });
+        const data = await res.json();
+        const suggestion = data.suggestion || 'No suggestion available.';
+
+        // Check if it's an error from Groq
+        if (suggestion.includes('Groq API error') || suggestion.includes('Groq request failed') || suggestion.includes('not configured')) {
+          area.innerHTML = `<div class="kb-suggestion" style="background:var(--warm-soft); color:var(--warm);">AI assistant unavailable — check your Groq API key in settings. You can still reply manually.</div>`;
+          return;
         }
 
-        function appendChat(text, type) {
-            const row = document.createElement('div');
-            row.className = `chat-row ${type === 'user' ? 'user' : 'ai'}`;
-            const bubble = document.createElement('div');
-            bubble.className = `chat-bubble ${type}`;
-            bubble.textContent = text;
-            row.appendChild(bubble);
-            chatMessages.appendChild(row);
-        }
-    </script>
+        area.innerHTML = `<div class="kb-suggestion">${escapeHtml(suggestion)}</div><button class="kb-suggest-btn" style="margin-top:8px;" onclick="useSuggestion()">Use as reply</button>`;
+      } catch {
+        area.innerHTML = '<p style="font-size:12px; color: var(--danger); padding:8px 0;">Could not reach AI. Reply manually.</p>';
+      }
+    }
+
+    function useSuggestion() {
+      const suggestion = document.querySelector('.kb-suggestion');
+      if (suggestion) {
+        document.getElementById('esc-reply-input').value = suggestion.textContent;
+      }
+    }
+
+    async function submitEscReply() {
+      const reply = document.getElementById('esc-reply-input').value.trim();
+      if (!reply) { showToast('Write a reply first'); return; }
+
+      try {
+        const res = await fetch(`${getApiUrl()}/escalations/${currentEscId}/reply`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ reply })
+        });
+        if (!res.ok) throw new Error('Reply failed');
+        showToast('Reply sent to employee');
+        closeEscPanel();
+        loadEscalations();
+      } catch (err) { showToast('Failed to send reply'); }
+    }
+  </script>
 </body>
 </html>

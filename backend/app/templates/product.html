@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RelyIQ — Try the HR Assistant Live</title>
+  <meta name="description" content="Ask the AI HR assistant anything. Pre-loaded with a sample company handbook. See instant answers with source citations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: oklch(0.18 0.02 260);
+      --ink-soft: oklch(0.35 0.015 260);
+      --ink-muted: oklch(0.52 0.01 260);
+      --surface: oklch(0.97 0.005 80);
+      --surface-raised: oklch(0.99 0.003 80);
+      --surface-sunken: oklch(0.94 0.008 80);
+      --brand: oklch(0.55 0.18 265);
+      --brand-soft: oklch(0.92 0.04 265);
+      --brand-text: oklch(0.42 0.16 265);
+      --accent: oklch(0.65 0.15 145);
+      --accent-soft: oklch(0.93 0.04 145);
+      --warm: oklch(0.68 0.12 50);
+      --warm-soft: oklch(0.94 0.03 50);
+      --border: oklch(0.88 0.01 260);
+      --border-light: oklch(0.92 0.005 260);
+      --shadow-sm: 0 1px 2px oklch(0.18 0.02 260 / 0.04);
+      --shadow-md: 0 4px 16px oklch(0.18 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 40px oklch(0.18 0.02 260 / 0.08);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--surface);
+      color: var(--ink);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in oklch, var(--surface) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 clamp(16px, 4vw, 32px);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .site-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .site-header .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: var(--brand);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: -0.02em;
+    }
+
+    .site-header .logo-text {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.03em;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-meta .badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--ink-muted);
+      padding: 4px 10px;
+      background: var(--surface-sunken);
+      border-radius: 100px;
+    }
+
+    .header-meta .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header-nav a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .header-nav a:hover {
+      color: var(--ink);
+      background: var(--surface-sunken);
+    }
+
+    .header-nav .cta {
+      background: var(--ink);
+      color: var(--surface);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+    }
+
+    .header-nav .cta:hover {
+      background: var(--ink-soft);
+      color: var(--surface);
+    }
+
+    /* Chat Container */
+    .chat-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 24px);
+    }
+
+    .chat-stream {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding-bottom: 24px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .chat-stream::-webkit-scrollbar { width: 5px; }
+    .chat-stream::-webkit-scrollbar-track { background: transparent; }
+    .chat-stream::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Message Rows */
+    .msg-row {
+      display: flex;
+      gap: 12px;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: msg-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .msg-row:nth-child(1) { animation-delay: 0.1s; }
+    .msg-row:nth-child(2) { animation-delay: 0.5s; }
+    .msg-row:nth-child(3) { animation-delay: 1.0s; }
+    .msg-row:nth-child(4) { animation-delay: 1.5s; }
+    .msg-row:nth-child(5) { animation-delay: 2.0s; }
+
+    @keyframes msg-enter {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-row.user {
+      flex-direction: row-reverse;
+    }
+
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .msg-avatar.ai {
+      background: var(--brand-soft);
+      color: var(--brand-text);
+    }
+
+    .msg-avatar.human {
+      background: var(--warm-soft);
+      color: var(--warm);
+    }
+
+    .msg-body {
+      max-width: 88%;
+      min-width: 0;
+    }
+
+    .msg-body .sender {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Card Types */
+    .card-welcome {
+      background: var(--surface-raised);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: clamp(20px, 3vw, 28px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-welcome h2 {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(20px, 2.5vw, 26px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      color: var(--ink);
+    }
+
+    .card-welcome p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--ink-soft);
+    }
+
+    .card-welcome .company-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      padding: 5px 12px;
+      background: var(--surface-sunken);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-muted);
+    }
+
+    .card-welcome .company-tag .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Stats Card */
+    .card-stats {
+      background: var(--surface-raised);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: clamp(16px, 2.5vw, 24px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-stats .stats-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink-muted);
+      margin-bottom: 12px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border-light);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .stat-cell {
+      background: var(--surface-raised);
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .stat-cell .stat-value {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(22px, 2.5vw, 28px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      line-height: 1;
+    }
+
+    .stat-cell .stat-label {
+      font-size: 11px;
+      color: var(--ink-muted);
+      margin-top: 4px;
+    }
+
+    /* Quick Actions Card */
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .action-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 450;
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, transform 0.1s, box-shadow 0.15s;
+      text-align: left;
+      line-height: 1.3;
+    }
+
+    .action-pill:hover {
+      border-color: var(--brand);
+      color: var(--brand-text);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+
+    .action-pill:active {
+      transform: translateY(0);
+    }
+
+    .action-pill .pill-icon {
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    /* Document Preview Card */
+    .card-docs {
+      background: var(--surface-raised);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-docs .docs-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-docs .docs-header span {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card-docs .docs-header .count {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: var(--surface-sunken);
+      border-radius: 100px;
+      color: var(--ink-muted);
+    }
+
+    .doc-row {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.1s;
+    }
+
+    .doc-row:last-child { border-bottom: none; }
+    .doc-row:hover { background: var(--surface-sunken); }
+
+    .doc-row .doc-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .doc-row:nth-child(1) .doc-icon { background: var(--brand-soft); }
+    .doc-row:nth-child(2) .doc-icon { background: var(--accent-soft); }
+    .doc-row:nth-child(3) .doc-icon { background: var(--warm-soft); }
+
+    .doc-row .doc-info {
+      min-width: 0;
+    }
+
+    .doc-row .doc-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .doc-row .doc-meta {
+      font-size: 11px;
+      color: var(--ink-muted);
+      margin-top: 1px;
+    }
+
+    /* AI Text Response */
+    .card-text {
+      background: var(--surface-raised);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: clamp(16px, 2.5vw, 22px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-text p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--ink-soft);
+    }
+
+    .card-text strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .card-text .source-cite {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 12px;
+      padding: 4px 10px;
+      background: var(--accent-soft);
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 500;
+      color: oklch(0.38 0.1 145);
+    }
+
+    /* User Message */
+    .card-user {
+      background: var(--ink);
+      color: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-left: auto;
+      max-width: 75%;
+    }
+
+    /* Input Area */
+    .chat-input-area {
+      padding-top: 16px;
+      border-top: 1px solid var(--border-light);
+      margin-top: auto;
+    }
+
+    .input-wrapper {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: var(--surface-raised);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 6px 6px 6px 18px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px oklch(0.55 0.18 265 / 0.08);
+    }
+
+    .input-wrapper textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--ink);
+      resize: none;
+      padding: 10px 0;
+      line-height: 1.5;
+      min-height: 20px;
+      max-height: 120px;
+    }
+
+    .input-wrapper textarea::placeholder {
+      color: var(--ink-muted);
+    }
+
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--brand);
+      color: white;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:active { transform: scale(0.92); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .send-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .input-hint {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .input-hint a {
+      color: var(--brand-text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .input-hint a:hover { text-decoration: underline; }
+
+    /* Typing indicator */
+    .typing-dots {
+      display: inline-flex;
+      gap: 4px;
+      padding: 14px 18px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ink-muted);
+      animation: dot-pulse 1.2s ease-in-out infinite;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes dot-pulse {
+      0%, 60%, 100% { opacity: 0.3; transform: scale(0.85); }
+      30% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .header-meta .badge { display: none; }
+      .card-user { max-width: 90%; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <a href="/" class="logo">
+      <div class="logo-mark">R</div>
+      <span class="logo-text">RelyIQ</span>
+    </a>
+    <div class="header-meta">
+      <div class="badge">Live demo · Acme Corp</div>
+      <nav class="header-nav">
+        <a href="/">Home</a>
+        <a href="/login" class="cta">Sign in</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="chat-viewport">
+    <div class="chat-stream" id="chat-stream">
+
+      <!-- Welcome Card -->
+      <div class="msg-row">
+        <div class="msg-avatar ai">R</div>
+        <div class="msg-body">
+          <div class="sender">RelyIQ</div>
+          <div class="card-welcome">
+            <h2>Your HR knowledge base, ready to answer</h2>
+            <p>I have access to Acme Corp's employee handbook, remote work guidelines, and benefits summary. Ask me anything — I'll cite the exact policy section.</p>
+            <div class="company-tag">
+              <span class="dot"></span>
+              Acme Corp · 3 policies loaded
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Card -->
+      <div class="msg-row">
+        <div class="msg-avatar ai">R</div>
+        <div class="msg-body">
+          <div class="card-stats">
+            <div class="stats-label">What I can help with</div>
+            <div class="stats-grid">
+              <div class="stat-cell">
+                <div class="stat-value">67</div>
+                <div class="stat-label">Questions covered</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-value">&lt;3s</div>
+                <div class="stat-label">Avg response</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Source-cited</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents Card -->
+      <div class="msg-row">
+        <div class="msg-avatar ai">R</div>
+        <div class="msg-body">
+          <div class="card-docs">
+            <div class="docs-header">
+              <span>Knowledge base</span>
+              <span class="count">3 docs</span>
+            </div>
+            <div class="doc-row">
+              <div class="doc-icon">📋</div>
+              <div class="doc-info">
+                <div class="doc-title">Employee Handbook 2026</div>
+                <div class="doc-meta">PTO, sick leave, parental leave, expenses</div>
+              </div>
+            </div>
+            <div class="doc-row">
+              <div class="doc-icon">🏠</div>
+              <div class="doc-info">
+                <div class="doc-title">Remote Work Guidelines</div>
+                <div class="doc-meta">Eligibility, core hours, tech requirements</div>
+              </div>
+            </div>
+            <div class="doc-row">
+              <div class="doc-icon">💊</div>
+              <div class="doc-info">
+                <div class="doc-title">Benefits Summary 2026</div>
+                <div class="doc-meta">Health, 401k, mental health, gym, learning</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="msg-row">
+        <div class="msg-avatar ai">R</div>
+        <div class="msg-body">
+          <div class="sender" style="margin-bottom: 10px;">Try asking</div>
+          <div class="card-actions">
+            <button class="action-pill" onclick="askQuestion('How many PTO days do new hires get?')">
+              <span class="pill-icon">🏖️</span> How many PTO days do new hires get?
+            </button>
+            <button class="action-pill" onclick="askQuestion('What is the remote work policy?')">
+              <span class="pill-icon">💻</span> What is the remote work policy?
+            </button>
+            <button class="action-pill" onclick="askQuestion('Can I expense my home internet?')">
+              <span class="pill-icon">📡</span> Can I expense my home internet?
+            </button>
+            <button class="action-pill" onclick="askQuestion('How does parental leave work?')">
+              <span class="pill-icon">👶</span> How does parental leave work?
+            </button>
+            <button class="action-pill" onclick="askQuestion('What mental health benefits are available?')">
+              <span class="pill-icon">🧠</span> Mental health benefits?
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-area">
+      <div class="input-wrapper">
+        <textarea id="chat-input" rows="1" placeholder="Ask about PTO, remote work, benefits..." onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+          <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">
+        <span>Answers cite the exact handbook section</span>
+        <a href="/login">Get this for your team →</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── Sample KB ────────────────────────────────────────────────────────────
+    const KB = {
+      pto: {
+        new_hire: { text: `As a new hire (0–1 years), you receive <strong>15 days PTO per year</strong>. PTO accrues monthly and is available immediately.\n\nAfter your first year it increases to 20 days, and after 3 years to 25 days. Unused days roll over up to 5 days max.`, source: 'Employee Handbook §1 — Paid Time Off' },
+        rollover: { text: `Unused PTO rolls over up to <strong>5 days maximum</strong> per year. Anything above that limit is forfeited on December 31.\n\nPlan accordingly — if you have 18 unused days on Dec 31, only 5 carry forward.`, source: 'Employee Handbook §1 — PTO Rollover' },
+        general: { text: `PTO at Acme Corp is structured by tenure:\n\n• <strong>0–1 years:</strong> 15 days/year\n• <strong>1–3 years:</strong> 20 days/year\n• <strong>3+ years:</strong> 25 days/year\n\nPTO accrues monthly. Request 2+ weeks in advance for absences over 3 days.`, source: 'Employee Handbook §1 — Paid Time Off' }
+      },
+      remote: {
+        general: { text: `Employees may work remotely <strong>up to 3 days per week</strong> after completing the 90-day probation period.\n\nCore hours are 10am–3pm local time. VPN must be connected. Manager approval required.`, source: 'Employee Handbook §2 + Remote Work Guidelines' },
+        internet: { text: `Yes — Acme reimburses <strong>$50/month</strong> for home internet. Submit monthly via Expensify with your receipt.\n\nYou also get a one-time $500 home office equipment allowance for desk, chair, or monitor.`, source: 'Employee Handbook §3 — Expense Reimbursement' }
+      },
+      parental: { text: `Primary caregivers receive <strong>16 weeks paid leave</strong> at 100% salary. Secondary caregivers get 4 weeks.\n\nYou must have 6+ months tenure to qualify. Leave must be taken within 12 months of birth or adoption.`, source: 'Employee Handbook §5 — Parental Leave' },
+      mental: { text: `Acme covers <strong>12 free therapy sessions per year</strong> through Spring Health — no cost to you.\n\nThe Employee Assistance Program (EAP) also provides free confidential counseling 24/7 for any personal or work issue.`, source: 'Benefits Summary 2026 — Mental Health' },
+      sick: { text: `You get <strong>10 sick days per year</strong>, resetting January 1. Can be used for personal illness, medical appointments, or caring for immediate family.\n\nDoctor's note required after 3 consecutive days. Unused days don't roll over.`, source: 'Employee Handbook §4 — Sick Leave' },
+      retirement: { text: `Acme offers a <strong>401(k) with 4% company match</strong>, fully vested after 2 years. Roth option available.\n\nYou also get 2 free sessions per year with a certified financial planner.`, source: 'Benefits Summary 2026 — Retirement' },
+      gym: { text: `Gym memberships and fitness apps are reimbursed up to <strong>$75/month</strong>. Any gym, CrossFit, yoga studio, or apps like Peloton qualify.\n\nSubmit monthly receipts via Expensify.`, source: 'Benefits Summary 2026 — Other Benefits' }
+    };
+
+    let isLoading = false;
+
+    function getAnswer(q) {
+      const lq = q.toLowerCase();
+      if (lq.includes('pto') || lq.includes('vacation') || lq.includes('time off') || lq.includes('days off')) {
+        if (lq.includes('new') || lq.includes('hire') || lq.includes('start') || lq.includes('first')) return KB.pto.new_hire;
+        if (lq.includes('roll') || lq.includes('carry') || lq.includes('unused')) return KB.pto.rollover;
+        return KB.pto.general;
+      }
+      if (lq.includes('remote') || lq.includes('work from home') || lq.includes('wfh')) return KB.remote.general;
+      if (lq.includes('internet') || lq.includes('wifi') || lq.includes('expense') || lq.includes('reimburse')) return KB.remote.internet;
+      if (lq.includes('parental') || lq.includes('maternity') || lq.includes('paternity') || lq.includes('baby')) return KB.parental;
+      if (lq.includes('mental') || lq.includes('therapy') || lq.includes('counseling')) return KB.mental;
+      if (lq.includes('sick') || lq.includes('illness')) return KB.sick;
+      if (lq.includes('401') || lq.includes('retire') || lq.includes('pension')) return KB.retirement;
+      if (lq.includes('gym') || lq.includes('fitness')) return KB.gym;
+      return { text: `I don't have specific information about that in the current knowledge base. I've flagged this for the HR team.\n\nTry asking about PTO, remote work, expenses, parental leave, sick days, or benefits.`, source: null, flagged: true };
+    }
+
+    // ─── Chat Logic ──────────────────────────────────────────────────────────
+    const stream = document.getElementById('chat-stream');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    function handleKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function autoGrow(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    function scrollToBottom() {
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    function askQuestion(q) {
+      input.value = q;
+      sendMessage();
+    }
+
+    function addUserMessage(text) {
+      const row = document.createElement('div');
+      row.className = 'msg-row user';
+      row.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      row.innerHTML = `
+        <div class="msg-avatar human">Y</div>
+        <div class="msg-body">
+          <div class="card-user">${escapeHtml(text)}</div>
+        </div>
+      `;
+      stream.appendChild(row);
+      scrollToBottom();
+    }
+
+    function addTypingIndicator() {
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.id = 'typing';
+      row.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+      row.innerHTML = `
+        <div class="msg-avatar ai">R</div>
+        <div class="msg-body">
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+        </div>
+      `;
+      stream.appendChild(row);
+      scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typing');
+      if (el) el.remove();
+    }
+
+    function addAIResponse(answer) {
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.style.animation = 'msg-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+
+      const sourceHtml = answer.source
+        ? `<div class="source-cite">📄 ${escapeHtml(answer.source)}</div>`
+        : (answer.flagged ? `<div class="source-cite" style="background: var(--warm-soft); color: oklch(0.45 0.12 50);">⚠️ Flagged for HR review</div>` : '');
+
+      row.innerHTML = `
+        <div class="msg-avatar ai">R</div>
+        <div class="msg-body">
+          <div class="card-text">
+            <p>${answer.text.replace(/\n/g, '<br>')}</p>
+            ${sourceHtml}
+          </div>
+        </div>
+      `;
+      stream.appendChild(row);
+      scrollToBottom();
+    }
+
+    function addFollowUps(question) {
+      const lq = question.toLowerCase();
+      let suggestions = [];
+
+      if (lq.includes('pto') || lq.includes('vacation')) {
+        suggestions = ['Can I carry over unused PTO?', 'What about sick days?'];
+      } else if (lq.includes('remote') || lq.includes('wfh')) {
+        suggestions = ['Can I expense my internet?', 'What are core hours?'];
+      } else if (lq.includes('parental')) {
+        suggestions = ['What about secondary caregiver?', 'How much PTO do I get?'];
+      } else {
+        suggestions = ['How many PTO days do I get?', 'What is the remote work policy?'];
+      }
+
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.style.animation = 'msg-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards';
+      row.style.opacity = '0';
+      row.innerHTML = `
+        <div class="msg-avatar ai" style="visibility: hidden;">R</div>
+        <div class="msg-body">
+          <div class="card-actions">
+            ${suggestions.map(s => `<button class="action-pill" onclick="askQuestion('${s}')">${escapeHtml(s)}</button>`).join('')}
+          </div>
+        </div>
+      `;
+      stream.appendChild(row);
+      scrollToBottom();
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text || isLoading) return;
+
+      isLoading = true;
+      input.value = '';
+      input.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      addUserMessage(text);
+      addTypingIndicator();
+
+      await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+
+      removeTypingIndicator();
+      const answer = getAnswer(text);
+      addAIResponse(answer);
+      addFollowUps(text);
+
+      isLoading = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // Focus input on load
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => input.focus(), 2200);
+    });
+  </script>
+</body>
+</html>

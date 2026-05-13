@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
 
     # App
+    SKIP_SUBSCRIPTION_CHECK: bool = True  # Set False in production
     APP_URL: str = "http://localhost:8000"
     PRICE_ID: str = "P-XXXXXXXXXXXXXXXX"  # fallback PayPal product/plan ID
 

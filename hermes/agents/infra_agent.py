@@ -266,7 +266,7 @@ def run_infra_incident_summarization(args: argparse.Namespace) -> None:
         "by_severity": by_sev,
         "incidents": recent[-20:],
         "recommended_next_steps": [
-            "Review incident context via ReplyIQ admin logs and system health endpoints.",
+            "Review incident context via RelyIQ admin logs and system health endpoints.",
             "Only apply config changes with explicit approval (no automatic restarts/redeploys).",
         ],
     }

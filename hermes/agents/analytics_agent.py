@@ -9,13 +9,13 @@ from hermes.tools.storage import write_json, utc_now_iso
 def run_analytics(args: argparse.Namespace) -> None:
     load_env()
 
-    # MVP stub: until ReplyIQ has an analytics admin API.
+    # MVP stub: until RelyIQ has an analytics admin API.
     payload = {
         "type": "analytics_snapshot",
         "at": utc_now_iso(),
         "status": "stub",
         "next": [
-            "Add ReplyIQ admin endpoints for conversion metrics (landing->trial, trial->active) by tenant/language",
+            "Add RelyIQ admin endpoints for conversion metrics (landing->trial, trial->active) by tenant/language",
             "Add Render deployment timeline capture",
         ],
     }

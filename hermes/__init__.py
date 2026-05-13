@@ -1,1 +1,1 @@
-"""ReplyIQ project Hermes (VPS operational layer)."""
+"""RelyIQ project Hermes (VPS operational layer)."""
