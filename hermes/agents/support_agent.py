@@ -10,12 +10,12 @@ def run_support(args: argparse.Namespace) -> None:
     load_env()
 
     # MVP stub: summarize last incidents.
-    # Real implementation would call ReplyIQ admin APIs for incident/task queues.
+    # Real implementation would call RelyIQ admin APIs for incident/task queues.
     payload = {
         "type": "support_summary",
         "at": utc_now_iso(),
         "status": "stub",
-        "note": "Wire to ReplyIQ admin endpoints when available.",
+        "note": "Wire to RelyIQ admin endpoints when available.",
     }
 
     out = memory_root() / "daily_summaries" / f"support_{datetime.utcnow().date().isoformat()}.json"

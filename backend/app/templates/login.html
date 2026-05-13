@@ -3,478 +3,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HR FAQ Bot - Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Sign in — RelyIQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    :root {
+      --ink: oklch(0.18 0.02 260); --ink-soft: oklch(0.35 0.015 260); --ink-muted: oklch(0.52 0.01 260);
+      --surface: oklch(0.97 0.005 80); --surface-raised: oklch(0.99 0.003 80); --surface-sunken: oklch(0.94 0.008 80);
+      --brand: oklch(0.55 0.18 265); --brand-soft: oklch(0.92 0.04 265); --brand-text: oklch(0.42 0.16 265);
+      --accent: oklch(0.65 0.15 145); --accent-soft: oklch(0.93 0.04 145);
+      --danger: oklch(0.55 0.2 25); --danger-soft: oklch(0.93 0.04 25);
+      --border: oklch(0.88 0.01 260); --border-light: oklch(0.92 0.005 260);
+      --shadow-sm: 0 1px 2px oklch(0.18 0.02 260 / 0.04);
+      --radius-sm: 6px; --radius-md: 12px; --radius-lg: 20px;
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
     }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--surface); color: var(--ink); min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; -webkit-font-smoothing: antialiased; }
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(37,110,115,0.13), transparent 28rem),
-        #f7f8f6;
-      min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      color: #333;
-    }
+    .auth-container { width: 100%; max-width: 380px; opacity: 0; transform: translateY(16px); animation: page-in 0.6s var(--ease-out-expo) 0.1s forwards; }
+    @keyframes page-in { to { opacity: 1; transform: translateY(0); } }
 
-    .container {
-      width: 100%;
-      max-width: 420px;
-    }
+    .logo-area { text-align: center; margin-bottom: 32px; }
+    .logo-area a { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+    .logo-mark { width: 32px; height: 32px; background: var(--brand); border-radius: 8px; display: grid; place-items: center; color: white; font-weight: 600; font-size: 14px; }
+    .logo-text { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; letter-spacing: -0.03em; }
 
-    .card {
-      background: #fff;
-      border: 1px solid #dde3dc;
-      border-radius: 10px;
-      box-shadow: 0 1px 2px rgba(23,33,26,0.08), 0 18px 44px rgba(23,33,26,0.08);
-      padding: 40px;
-      overflow: hidden;
-    }
+    .auth-title { font-family: 'Fraunces', serif; font-size: clamp(24px, 3vw, 30px); font-weight: 600; letter-spacing: -0.03em; text-align: center; margin-bottom: 6px; }
+    .auth-subtitle { font-size: 14px; color: var(--ink-muted); text-align: center; margin-bottom: 28px; }
 
-    .header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
+    .tabs { display: flex; background: var(--surface-sunken); border-radius: var(--radius-md); padding: 4px; margin-bottom: 24px; }
+    .tab { flex: 1; padding: 10px; border: none; background: none; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--ink-muted); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--ease-out-expo); }
+    .tab.active { background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow-sm); }
 
-    .logo {
-      width: 64px;
-      height: 64px;
-      background: #256e73;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--ink-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-group input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-md); font-family: inherit; font-size: 14px; color: var(--ink); background: var(--surface-raised); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-group input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px oklch(0.55 0.18 265 / 0.08); }
+    .form-group input::placeholder { color: oklch(0.62 0.005 260); }
 
-    .logo svg {
-      width: 36px;
-      height: 36px;
-      fill: #fff;
-    }
+    .submit-btn { width: 100%; padding: 13px; border: none; border-radius: var(--radius-md); background: var(--brand); color: white; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s, transform 0.1s; margin-top: 4px; }
+    .submit-btn:hover { opacity: 0.88; }
+    .submit-btn:active { transform: scale(0.98); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    h1 {
-      font-size: 24px;
-      font-weight: 700;
-      color: #17211a;
-      margin-bottom: 8px;
-    }
+    .error-msg { background: var(--danger-soft); color: var(--danger); padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 16px; display: none; animation: shake 0.4s var(--ease-out-expo); }
+    .error-msg.visible { display: block; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
 
-    .subtitle {
-      font-size: 14px;
-      color: #6b7280;
-    }
+    .switch-text { text-align: center; font-size: 13px; color: var(--ink-muted); margin-top: 20px; }
+    .switch-text a { color: var(--brand-text); font-weight: 500; cursor: pointer; text-decoration: none; }
+    .switch-text a:hover { text-decoration: underline; }
 
-    .form-tabs {
-      display: flex;
-      background: #eef1ed;
-      border-radius: 8px;
-      padding: 4px;
-      margin-bottom: 28px;
-    }
+    .back-link { text-align: center; margin-top: 24px; font-size: 13px; }
+    .back-link a { color: var(--ink-muted); text-decoration: none; }
+    .back-link a:hover { color: var(--ink); }
 
-    .form-tab {
-      flex: 1;
-      padding: 10px 16px;
-      border: none;
-      background: transparent;
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 500;
-      color: #6b7280;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.2s ease;
-    }
+    .form-section { display: none; }
+    .form-section.active { display: block; }
 
-    .form-tab.active {
-      background: #fff;
-      color: #256e73;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 6px;
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid #dde3dc;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 15px;
-      color: #1a1a2e;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: #256e73;
-      box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
-    }
-
-    .form-input::placeholder {
-      color: #9ca3af;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px 24px;
-      border: none;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-primary {
-      background: #256e73;
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(37,110,115,0.22);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37,110,115,0.28);
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .error-message {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-size: 14px;
-      margin-bottom: 20px;
-      display: none;
-    }
-
-    .error-message.show {
-      display: block;
-    }
-
-    .form-section {
-      display: none;
-    }
-
-    .form-section.active {
-      display: block;
-    }
-
-    .divider {
-      height: 1px;
-      background: #e5e7eb;
-      margin: 24px 0;
-    }
-
-    .switch-text {
-      text-align: center;
-      font-size: 14px;
-      color: #6b7280;
-      margin-top: 20px;
-    }
-
-    .switch-link {
-      color: #256e73;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-    }
-
-    .switch-link:hover {
-      text-decoration: underline;
-    }
-
-    .tenant-field {
-      display: none;
-    }
-
-    .tenant-field.show {
-      display: block;
-    }
-
-    .form-tab:focus-visible,
-    .form-input:focus-visible,
-    .btn:focus-visible,
-    .switch-link:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(37,110,115,0.16);
-    }
-
-    @media (max-width: 480px) {
-      body { padding: 12px; }
-      .card { padding: 24px 18px; }
-      .form-tabs { margin-bottom: 22px; }
-    }
+    @media (prefers-reduced-motion: reduce) { .auth-container { animation: none; opacity: 1; transform: none; } .error-msg { animation: none; } }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="logo">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-          </svg>
-        </div>
-        <h1 id="formTitle">Welcome Back</h1>
-        <p class="subtitle" id="formSubtitle">Sign in to your account</p>
-      </div>
+  <div class="auth-container">
+    <div class="logo-area"><a href="/"><div class="logo-mark">R</div><span class="logo-text">RelyIQ</span></a></div>
+    <h1 class="auth-title" id="title">Welcome back</h1>
+    <p class="auth-subtitle" id="subtitle">Sign in to your HR assistant</p>
 
-      <div class="error-message" id="errorMessage"></div>
-
-      <div class="form-tabs">
-        <button class="form-tab active" data-tab="login" id="tabLogin" aria-selected="true">Sign In</button>
-        <button class="form-tab" data-tab="register" id="tabRegister" aria-selected="false">Register</button>
-      </div>
-
-      <div class="form-section active" id="loginSection">
-        <form id="loginForm">
-          <div class="form-group">
-            <label class="form-label" for="loginEmail">Email Address</label>
-            <input type="email" class="form-input" id="loginEmail" name="email" placeholder="you@company.com" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="loginPassword">Password</label>
-            <input type="password" class="form-input" id="loginPassword" name="password" placeholder="Enter your password" required>
-          </div>
-          <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
-        </form>
-      </div>
-
-      <div class="form-section" id="registerSection">
-        <form id="registerForm">
-          <div class="form-group">
-            <label class="form-label" for="registerName">Full Name</label>
-            <input type="text" class="form-input" id="registerName" name="name" placeholder="John Doe" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="registerEmail">Email Address</label>
-            <input type="email" class="form-input" id="registerEmail" name="email" placeholder="you@company.com" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="registerPassword">Password</label>
-            <input type="password" class="form-input" id="registerPassword" name="password" placeholder="Create a strong password" required minlength="8">
-          </div>
-          <div class="form-group tenant-field" id="tenantField">
-            <label class="form-label" for="registerTenant">Company Name</label>
-            <input type="text" class="form-input" id="registerTenant" name="tenant_slug" placeholder="acme-corp">
-          </div>
-          <button type="submit" class="btn btn-primary" id="registerBtn">Create Account</button>
-        </form>
-      </div>
-
-      <p class="switch-text" id="switchText">
-        Don't have an account? <span class="switch-link" id="switchLink">Register</span>
-      </p>
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" id="tab-register" onclick="switchTab('register')">Create account</button>
     </div>
+
+    <div class="error-msg" id="error"></div>
+
+    <div class="form-section active" id="section-login">
+      <form id="login-form">
+        <div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email" placeholder="you@company.com" required></div>
+        <div class="form-group"><label for="login-pass">Password</label><input type="password" id="login-pass" placeholder="Your password" required></div>
+        <button type="submit" class="submit-btn" id="login-btn">Sign in</button>
+      </form>
+    </div>
+
+    <div class="form-section" id="section-register">
+      <form id="register-form">
+        <div class="form-group"><label for="reg-name">Full name</label><input type="text" id="reg-name" placeholder="Jane Smith" required></div>
+        <div class="form-group"><label for="reg-email">Email</label><input type="email" id="reg-email" placeholder="you@company.com" required></div>
+        <div class="form-group"><label for="reg-pass">Password</label><input type="password" id="reg-pass" placeholder="8+ characters" required minlength="8"></div>
+        <div class="form-group"><label for="reg-company">Company name</label><input type="text" id="reg-company" placeholder="Acme Corp" required></div>
+        <button type="submit" class="submit-btn" id="reg-btn">Create account</button>
+      </form>
+    </div>
+
+    <div class="switch-text" id="switch">Don't have an account? <a onclick="switchTab('register')">Register</a></div>
+    <div class="back-link"><a href="/">← Back to home</a></div>
   </div>
 
   <script>
-    const tabLogin = document.getElementById('tabLogin');
-    const tabRegister = document.getElementById('tabRegister');
-    const loginSection = document.getElementById('loginSection');
-    const registerSection = document.getElementById('registerSection');
-    const formTitle = document.getElementById('formTitle');
-    const formSubtitle = document.getElementById('formSubtitle');
-    const switchText = document.getElementById('switchText');
-    const switchLink = document.getElementById('switchLink');
-    const errorMessage = document.getElementById('errorMessage');
-    const tenantField = document.getElementById('tenantField');
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const loginBtn = document.getElementById('loginBtn');
-    const registerBtn = document.getElementById('registerBtn');
-
-    let currentTab = 'login';
-
-    function showError(message) {
-      errorMessage.textContent = message;
-      errorMessage.classList.add('show');
-    }
-
-    function getErrorMessage(data, fallback) {
-      if (!data) return fallback;
-      if (typeof data.detail === 'string') return data.detail;
-      if (data.error && typeof data.error.message === 'string') return data.error.message;
-      if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
-      return fallback;
-    }
-
-    async function readJsonSafe(response) {
-      try { return await response.json(); } catch (e) { return null; }
-    }
-
-    function hideError() {
-      errorMessage.classList.remove('show');
-    }
-
-    function setLoading(button, loading) {
-      button.disabled = loading;
-      button.textContent = loading ? 'Please wait...' : button.dataset.originalText;
-    }
-
     function switchTab(tab) {
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      document.getElementById('section-login').classList.toggle('active', tab === 'login');
+      document.getElementById('section-register').classList.toggle('active', tab === 'register');
+      document.getElementById('title').textContent = tab === 'login' ? 'Welcome back' : 'Create your account';
+      document.getElementById('subtitle').textContent = tab === 'login' ? 'Sign in to your HR assistant' : 'Get started with RelyIQ';
+      document.getElementById('switch').innerHTML = tab === 'login'
+        ? 'Don\'t have an account? <a onclick="switchTab(\'register\')">Register</a>'
+        : 'Already have an account? <a onclick="switchTab(\'login\')">Sign in</a>';
       hideError();
-      currentTab = tab;
-
-      if (tab === 'login') {
-        tabLogin.classList.add('active');
-        tabLogin.setAttribute('aria-selected', 'true');
-        tabRegister.classList.remove('active');
-        tabRegister.setAttribute('aria-selected', 'false');
-        loginSection.classList.add('active');
-        registerSection.classList.remove('active');
-        formTitle.textContent = 'Welcome Back';
-        formSubtitle.textContent = 'Sign in to your account';
-        switchText.innerHTML = 'Don\'t have an account? <span class="switch-link" id="switchLink">Register</span>';
-        tenantField.classList.remove('show');
-      } else {
-        tabLogin.classList.remove('active');
-        tabLogin.setAttribute('aria-selected', 'false');
-        tabRegister.classList.add('active');
-        tabRegister.setAttribute('aria-selected', 'true');
-        loginSection.classList.remove('active');
-        registerSection.classList.add('active');
-        formTitle.textContent = 'Create Account';
-        formSubtitle.textContent = 'Get started with HR FAQ Bot';
-        switchText.innerHTML = 'Already have an account? <span class="switch-link" id="switchLink">Sign In</span>';
-        tenantField.classList.add('show');
-      }
-
-      document.getElementById('switchLink').addEventListener('click', () => {
-        switchTab(tab === 'login' ? 'register' : 'login');
-      });
     }
 
-    loginBtn.dataset.originalText = 'Sign In';
-    registerBtn.dataset.originalText = 'Create Account';
+    function showError(msg) { const el = document.getElementById('error'); el.textContent = msg; el.classList.add('visible'); }
+    function hideError() { document.getElementById('error').classList.remove('visible'); }
 
-    tabLogin.addEventListener('click', () => switchTab('login'));
-    tabRegister.addEventListener('click', () => switchTab('register'));
-    switchLink.addEventListener('click', () => {
-      switchTab(currentTab === 'login' ? 'register' : 'login');
-    });
-
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError();
-
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value;
-
-      if (!email || !password) {
-        showError('Please fill in all fields');
-        return;
-      }
-
-      setLoading(loginBtn, true);
-
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault(); hideError();
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true; btn.textContent = 'Signing in...';
       try {
-        const response = await fetch('/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await readJsonSafe(response);
-
-        if (!response.ok) {
-          throw new Error(getErrorMessage(data, 'Invalid email or password'));
-        }
-
+        const res = await fetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: document.getElementById('login-email').value, password: document.getElementById('login-pass').value }) });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.detail || data?.error?.message || 'Invalid credentials');
         localStorage.setItem('jwt_token', data.access_token);
         localStorage.setItem('tenant_slug', data.tenant_slug || 'default');
-
         window.location.href = `/${data.tenant_slug || 'default'}/dashboard`;
-      } catch (err) {
-        showError(err.message || 'Connection error. Please try again.');
-      } finally {
-        setLoading(loginBtn, false);
-      }
+      } catch (err) { showError(err.message); }
+      btn.disabled = false; btn.textContent = 'Sign in';
     });
 
-    registerForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError();
-
-      const name = document.getElementById('registerName').value.trim();
-      const email = document.getElementById('registerEmail').value.trim();
-      const password = document.getElementById('registerPassword').value;
-      const company_name = document.getElementById('registerTenant').value.trim();
-
-      if (!company_name) {
-        showError('Company name is required');
-        return;
-      }
-
-      if (!name || !email || !password) {
-        showError('Please fill in all fields');
-        return;
-      }
-
-      if (password.length < 8) {
-        showError('Password must be at least 8 characters');
-        return;
-      }
-
-      setLoading(registerBtn, true);
-
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault(); hideError();
+      const btn = document.getElementById('reg-btn');
+      btn.disabled = true; btn.textContent = 'Creating...';
       try {
-        const response = await fetch('/auth/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ full_name: name, email, password, company_name })
-        });
-
-        const data = await readJsonSafe(response);
-
-        if (!response.ok) {
-          throw new Error(getErrorMessage(data, 'Registration failed. Please try again.'));
-        }
-
+        const res = await fetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-pass').value, company_name: document.getElementById('reg-company').value }) });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.detail || data?.error?.message || 'Registration failed');
         localStorage.setItem('jwt_token', data.access_token);
         localStorage.setItem('tenant_slug', data.tenant_slug || 'default');
-
         window.location.href = `/${data.tenant_slug || 'default'}/dashboard`;
-      } catch (err) {
-        showError(err.message || 'Connection error. Please try again.');
-      } finally {
-        setLoading(registerBtn, false);
-      }
+      } catch (err) { showError(err.message); }
+      btn.disabled = false; btn.textContent = 'Create account';
     });
   </script>
 </body>

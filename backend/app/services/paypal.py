@@ -65,7 +65,7 @@ async def create_subscription(name: str, email: str, plan_id: str, *, return_url
                 "email_address": email,
             },
             "application_context": {
-                "brand_name": "HR FAQ Bot",
+                "brand_name": "RelyIQ",
                 "return_url": return_url,
                 "cancel_url": cancel_url,
             },
