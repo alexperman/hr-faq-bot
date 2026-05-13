@@ -11,7 +11,7 @@ from app.services.structured_logger import log_event
 
 from app.config import get_settings
 from app.database import engine, Base
-from app.routers import auth, kb, chat, billing
+from app.routers import auth, kb, chat, billing, leads
 from app.routers import admin
 from app.routers import escalations
 
@@ -83,6 +83,7 @@ app.include_router(auth.router)
 app.include_router(kb.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
+app.include_router(leads.router)
 app.include_router(admin.router)
 app.include_router(escalations.router)
 
@@ -172,7 +173,7 @@ async def success_page():
 
 @app.get("/index")
 async def index_page():
-    return RedirectResponse(url="/presell")
+    return FileResponse(BASE_DIR / "index.html")
 
 
 # ─── App Pages ────────────────────────────────────────────────────────────────
