@@ -158,6 +158,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="RelyIQ API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="AlterZahen API", version="1.1.0", lifespan=lifespan)
 
 _allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",")]
 app.add_middleware(
