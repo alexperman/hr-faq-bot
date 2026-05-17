@@ -97,7 +97,7 @@ async def invite_user(
     # Check if user already exists
     existing = await db.execute(select(User).where(User.email == request.email))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409, detail="User already registered")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already registered")
 
     # Generate temp password
     import secrets

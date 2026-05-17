@@ -46,11 +46,12 @@
     .article-body strong { color: var(--ink); font-weight: 600; }
     .article-body hr { border: none; border-top: 1px solid var(--border-light); margin: 40px 0; }
 
-    .article-cta { background: var(--surface-raised); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: clamp(24px, 4vw, 32px); margin: 40px 0; }
+    .article-cta { background: var(--surface-sunken); border-left: 3px solid var(--brand); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: clamp(24px, 4vw, 32px); margin: 40px 0; }
     .article-cta h3 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 8px; }
     .article-cta p { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 16px; }
-    .article-cta .btn { display: inline-flex; padding: 12px 20px; background: var(--brand); color: white; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
+    .article-cta .btn { display: inline-flex; padding: 12px 20px; background: var(--brand); color: white; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; text-decoration: none; transition: opacity 0.15s, transform 0.1s; }
     .article-cta .btn:hover { opacity: 0.88; }
+    .article-cta .btn:active { transform: scale(0.98); }
 
     .article-body ul { margin: 0 0 24px 0; padding-left: 0; list-style: none; }
     .article-body ul li { font-size: 15px; line-height: 1.7; color: var(--ink-soft); padding: 4px 0 4px 20px; position: relative; }

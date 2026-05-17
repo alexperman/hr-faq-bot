@@ -43,6 +43,12 @@ async def lifespan(app: FastAPI):
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                # Add missing columns to existing tables (lightweight migration)
+                await conn.execute(
+                    __import__('sqlalchemy').text(
+                        "ALTER TABLE escalations ADD COLUMN IF NOT EXISTS read_by_user BOOLEAN DEFAULT FALSE"
+                    )
+                )
             _db_ready = True
             app.state.db_ready = True
             _db_error = None
@@ -294,6 +300,16 @@ async def product_page(request: Request):
 @app.get("/success")
 async def success_page():
     return FileResponse(TEMPLATES_DIR / "success.html")
+
+
+@app.get("/privacy")
+async def privacy_page():
+    return FileResponse(TEMPLATES_DIR / "privacy.html")
+
+
+@app.get("/terms")
+async def terms_page():
+    return FileResponse(TEMPLATES_DIR / "terms.html")
 
 
 @app.get("/index")
