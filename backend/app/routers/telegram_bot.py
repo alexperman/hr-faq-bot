@@ -202,7 +202,14 @@ _CHANNEL_HANDLERS = {
 async def telegram_webhook(bot_token: str, request: Request):
     """Receive Telegram updates for a specific bot and dispatch to its agent."""
     # Load hermes env so bot tokens are available
+    env_path = Path(__file__).resolve().parents[3] / "hermes" / ".env"
     _load_env()
+
+    # Debug: log env vars present
+    from app.services.structured_logger import log_event
+    log_event(event="telegram_webhook_hit", env_exists=str(env_path.exists()),
+              token_growth=os.environ.get("TELEGRAM_BOT_TOKEN","")[:10],
+              token_infra=os.environ.get("TELEGRAM_BOT_TOKEN_INFRA","")[:10])
 
     try:
         body = await request.json()
