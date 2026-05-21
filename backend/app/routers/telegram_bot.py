@@ -222,34 +222,39 @@ _CHANNEL_HANDLERS = {
 @router.post("/{bot_token}/webhook")
 async def telegram_webhook(bot_token: str, request: Request):
     """Receive Telegram updates for a specific bot and dispatch to its agent."""
-    # Load hermes env so bot tokens are available
+    # Load hermes .env into os.environ
     env_path = Path(__file__).resolve().parents[3] / "hermes" / ".env"
-    _load_env()
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
-    # Debug: log env vars present
-    token_map = {
-        "TELEGRAM_BOT_TOKEN": "TELEGRAM_CHAT_GROWTH",
-        "TELEGRAM_BOT_TOKEN_INFRA": "TELEGRAM_CHAT_INFRA",
-        "TELEGRAM_BOT_TOKEN_MEMORY": "TELEGRAM_CHAT_MEMORY",
-        "TELEGRAM_BOT_TOKEN_PRODUCT": "TELEGRAM_CHAT_PRODUCT",
-        "TELEGRAM_BOT_TOKEN_CRITICAL": "TELEGRAM_CHAT_CRITICAL",
+    # Debug log the incoming token
+    log_event(event="telegram_hit", bot_token=bot_token, path=str(env_path), exists=str(env_path.exists()))
+
+    # Hardcoded map - works regardless of .env on Render
+    _HARDCODED = {
+        "8526153645:AAFHFDXrVVpIUg-Xw5vXStr56P1QrqROYxQ": ("TELEGRAM_CHAT_INFRA", "184895919"),
+        "8896327975:AAGF96IAAnJFwOi7euFc2SjZK1BWuhFz0-U": ("TELEGRAM_CHAT_MEMORY", "184895919"),
+        "8926108968:AAHN00pVX2dsAfBDNw0w7QsT0mu4OQ7PaZA": ("TELEGRAM_CHAT_PRODUCT", "184895919"),
+        "8732149825:AAHntt58y97KYR8o8iK1vTF1VSi-Wj5WqhI": ("TELEGRAM_CHAT_CRITICAL", "184895919"),
+        "8849839799:AAGmWgR7AZgHDWdT7m7M-GOvAf-eyZwTYGI": ("TELEGRAM_CHAT_GROWTH", "184895919"),
     }
-    env_tokens = {k: (v[:10]+"..." if v else "MISSING") for k, v in [(k, os.environ.get(k,"")) for k in token_map]}
-    log_event(event="telegram_webhook_hit", path=str(env_path), exists=str(env_path.exists()), env_tokens=env_tokens)
 
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
-
-    # Resolve bot → channel
-    config = _get_bot_config(bot_token)
+    config = _HARDCODED.get(bot_token.strip())
+    log_event(event="telegram_config", config=str(config))
     if not config:
         raise HTTPException(status_code=404, detail="Unknown bot token")
 
     channel_env, chat_id = config
 
-    # Handle Telegram webhook verification (for setWebhook)
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
     if body.get("message") is None and body.get("edited_message") is None:
         # Might be a service message or webhook verification
         if "update_id" in body:
