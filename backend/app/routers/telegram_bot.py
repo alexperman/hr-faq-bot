@@ -33,7 +33,17 @@ def _load_env():
 
 def _get_bot_config(bot_token: str) -> tuple[str, str] | None:
     """Return (channel_env_var, chat_id) for a given bot token, or None."""
-    # Check each bot token env var
+    # Load hermes .env (not deployed on Render, but worth trying)
+    env_path = Path(__file__).resolve().parents[3] / "hermes" / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+    # Token map: env var name → channel env var
     token_map = {
         "TELEGRAM_BOT_TOKEN_INFRA": "TELEGRAM_CHAT_INFRA",
         "TELEGRAM_BOT_TOKEN_MEMORY": "TELEGRAM_CHAT_MEMORY",
@@ -46,6 +56,17 @@ def _get_bot_config(bot_token: str) -> tuple[str, str] | None:
             chat_id = os.environ.get(channel_env, "")
             if chat_id:
                 return channel_env, chat_id
+
+    # Fallback: hardcoded tokens (Render doesn't have .env file)
+    _HARDCODED = {
+        "8526153645:AAFHFDXrVVpIUg-Xw5vXStr56P1QrqROYxQ": ("TELEGRAM_CHAT_INFRA", "184895919"),
+        "8896327975:AAGF96IAAnJFwOi7euFc2SjZK1BWuhFz0-U": ("TELEGRAM_CHAT_MEMORY", "184895919"),
+        "8926108968:AAHN00pVX2dsAfBDNw0w7QsT0mu4OQ7PaZA": ("TELEGRAM_CHAT_PRODUCT", "184895919"),
+        "8732149825:AAHntt58y97KYR8o8iK1vTF1VSi-Wj5WqhI": ("TELEGRAM_CHAT_CRITICAL", "184895919"),
+        "8849839799:AAGmWgR7AZgHDWdT7m7M-GOvAf-eyZwTYGI": ("TELEGRAM_CHAT_GROWTH", "184895919"),
+    }
+    if bot_token in _HARDCODED:
+        return _HARDCODED[bot_token]
     return None
 
 
