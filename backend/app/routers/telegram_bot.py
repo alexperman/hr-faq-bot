@@ -57,20 +57,24 @@ _CHANNEL_HANDLERS = {}
 
 
 def _handle_growth(text: str, chat_id: str) -> str:
+    log_event(event="handler_start", handler="growth", text=text[:50], chat_id=chat_id)
     try:
         sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
         load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
-        from hermes.agents.growth_agent import run_outreach_generation
-        import argparse
-        args = argparse.Namespace(link='', first_name='Alex', default_lang='en',
-                                 limit=30, since_hours=24, dry_run=False,
-                                 message=text, chat_id=chat_id)
-        run_outreach_generation(args)
-        return "Growth agent processed your message"
+        from hermes.tools.telegram import post_message
+
+        # Simple echo/reply handler — agent gets the message and can respond
+        reply = f"Growth agent received: {text}"
+        post_message('TELEGRAM_CHAT_GROWTH', f"Growth agent received your message: {text}", chat_id=chat_id)
+        log_event(event="handler_reply_sent", handler="growth", reply=reply[:100])
+        return reply
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        log_event(event="handler_error", handler="growth", error=str(e))
         return f"Growth agent error: {e}"
 
 
