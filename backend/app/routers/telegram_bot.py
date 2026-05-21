@@ -33,6 +33,9 @@ def _load_env():
 
 def _get_config(bot_token: str):
     _load_env()
+    # Log what we're working with
+    print(f"[TELEGRAM_WEBHOOK] bot_token={bot_token[:15]}...", file=__import__("sys").stderr)
+    print(f"[TELEGRAM_WEBHOOK] env TELEGRAM_BOT_TOKEN={os.environ.get('TELEGRAM_BOT_TOKEN','')[:15]}...", file=__import__("sys").stderr)
     # Try env vars first
     token_map = {
         "TELEGRAM_BOT_TOKEN_INFRA": "TELEGRAM_CHAT_INFRA",
@@ -55,11 +58,11 @@ _CHANNEL_HANDLERS = {}
 
 def _handle_growth(text: str, chat_id: str) -> str:
     try:
-        sys_path = str(Path(__file__).resolve().parents[2])
+        sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
-        load_env(str(Path(__file__).resolve().parents[2] / "hermes" / ".env"))
+        load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
         from hermes.agents.growth_agent import run_outreach_generation
         import argparse
         args = argparse.Namespace(link='', first_name='Alex', default_lang='en',
@@ -73,11 +76,11 @@ def _handle_growth(text: str, chat_id: str) -> str:
 
 def _handle_leads(text: str, chat_id: str) -> str:
     try:
-        sys_path = str(Path(__file__).resolve().parents[2])
+        sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
-        load_env(str(Path(__file__).resolve().parents[2] / "hermes" / ".env"))
+        load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
         from hermes.agents.leads_agent import run_leads_outreach
         import argparse
         args = argparse.Namespace(link='', default_lang='en', limit=30, since_hours=24,
@@ -90,11 +93,11 @@ def _handle_leads(text: str, chat_id: str) -> str:
 
 def _handle_memory(text: str, chat_id: str) -> str:
     try:
-        sys_path = str(Path(__file__).resolve().parents[2])
+        sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
-        load_env(str(Path(__file__).resolve().parents[2] / "hermes" / ".env"))
+        load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
         from hermes.agents.memory_agent import run_memory_maintenance
         import argparse
         args = argparse.Namespace(message=text, chat_id=chat_id, dry_run=False)
@@ -106,11 +109,11 @@ def _handle_memory(text: str, chat_id: str) -> str:
 
 def _handle_product(text: str, chat_id: str) -> str:
     try:
-        sys_path = str(Path(__file__).resolve().parents[2])
+        sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
-        load_env(str(Path(__file__).resolve().parents[2] / "hermes" / ".env"))
+        load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
         from hermes.agents.product_agent import run_product_recommendations
         import argparse
         args = argparse.Namespace(message=text, chat_id=chat_id, dry_run=False)
@@ -122,11 +125,11 @@ def _handle_product(text: str, chat_id: str) -> str:
 
 def _handle_infra(text: str, chat_id: str) -> str:
     try:
-        sys_path = str(Path(__file__).resolve().parents[2])
+        sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
-        load_env(str(Path(__file__).resolve().parents[2] / "hermes" / ".env"))
+        load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
         from hermes.agents.infra_agent import run_infra_health_check
         import argparse
         args = argparse.Namespace(message=text, chat_id=chat_id, dry_run=False)
