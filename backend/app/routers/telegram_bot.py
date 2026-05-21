@@ -200,6 +200,9 @@ _CHANNEL_HANDLERS = {
 @router.post("/{bot_token}/webhook")
 async def telegram_webhook(bot_token: str, request: Request):
     """Receive Telegram updates for a specific bot and dispatch to its agent."""
+    # Load hermes env so bot tokens are available
+    _load_env()
+
     try:
         body = await request.json()
     except Exception:
