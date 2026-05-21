@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "relyiq": {
+      "command": "python",
+      "args": ["-m", "hermes.tools.mcp_server"],
+      "env": {
+        "REPLYIQ_ADMIN_API_URL": "http://localhost:5000",
+        "RELYIQ_API_KEY": "${RELYIQ_API_KEY}"
+      },
+      "disabled": false,
+      "autoApprove": ["get_health", "list_documents", "list_escalations", "get_analytics"]
+    }
+  }
+}

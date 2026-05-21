@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integrations — RelyIQ</title>
+  <meta name="description" content="Connect RelyIQ to your workflow via MCP, CLI, or Skills. API key required.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <style>
+    :root{--ink:oklch(0.18 0.02 260);--ink-soft:oklch(0.35 0.015 260);--ink-muted:oklch(0.52 0.01 260);--surface:oklch(0.97 0.005 80);--surface-raised:oklch(0.99 0.003 80);--surface-sunken:oklch(0.94 0.008 80);--brand:oklch(0.55 0.18 265);--brand-soft:oklch(0.92 0.04 265);--brand-text:oklch(0.42 0.16 265);--accent:oklch(0.65 0.15 145);--accent-soft:oklch(0.93 0.04 145);--warm:oklch(0.68 0.12 50);--warm-soft:oklch(0.94 0.03 50);--danger:oklch(0.55 0.2 25);--danger-soft:oklch(0.93 0.04 25);--border:oklch(0.88 0.01 260);--border-light:oklch(0.92 0.005 260);--shadow-sm:0 1px 2px oklch(0.18 0.02 260/0.04);--shadow-md:0 4px 16px oklch(0.18 0.02 260/0.06);--radius-sm:6px;--radius-md:12px;--radius-lg:20px;--ease:cubic-bezier(0.16,1,0.3,1)}
+    *{margin:0;padding:0;box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100dvh}a{color:inherit;text-decoration:none}
+    .site-header{position:sticky;top:0;z-index:50;background:color-mix(in oklch,var(--surface) 92%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--border-light);padding:0 clamp(20px,5vw,48px);height:56px;display:flex;align-items:center;justify-content:space-between}
+    .logo{display:flex;align-items:center;gap:10px}.logo-mark{width:28px;height:28px;background:var(--brand);border-radius:7px;display:grid;place-items:center;color:white;font-weight:600;font-size:13px}.logo-text{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:-0.03em}
+    .nav-links{display:flex;align-items:center;gap:4px}.nav-links a{font-size:13px;font-weight:500;color:var(--ink-muted);padding:7px 14px;border-radius:var(--radius-sm);transition:all 0.15s}.nav-links a:hover{color:var(--ink);background:var(--surface-sunken)}.nav-links .cta{background:var(--ink);color:var(--surface)}.nav-links .cta:hover{opacity:0.85;background:var(--ink);color:var(--surface)}
+    .page{max-width:900px;margin:0 auto;padding:clamp(32px,5vw,64px) clamp(20px,5vw,32px)}
+    .page-header{margin-bottom:32px;opacity:0;transform:translateY(12px);animation:fade-up .6s var(--ease) .05s forwards}.page-header h1{font-family:'Fraunces',serif;font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-0.03em;line-height:1.15;margin-bottom:8px}.page-header p{font-size:15px;line-height:1.7;color:var(--ink-soft);max-width:600px}
+    .key-banner{background:var(--warm-soft);border:1px solid oklch(0.85 0.06 50);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:32px;display:flex;align-items:center;gap:16px;opacity:0;animation:fade-up .5s var(--ease) .1s forwards}
+    .key-banner .icon{font-size:24px;flex-shrink:0}.key-banner .text{flex:1}.key-banner .text strong{display:block;font-size:14px;margin-bottom:2px}.key-banner .text span{font-size:13px;color:var(--ink-soft)}
+    .key-banner .btn-gen{padding:10px 18px;background:var(--brand);color:white;border:none;border-radius:var(--radius-md);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:transform .1s,opacity .15s;white-space:nowrap}.key-banner .btn-gen:hover{opacity:.85}.key-banner .btn-gen:active{transform:scale(.97)}
+    .tabs{display:flex;gap:4px;margin-bottom:32px;border-bottom:1px solid var(--border-light);opacity:0;animation:fade-up .5s var(--ease) .15s forwards}
+    .tab{font-family:inherit;font-size:14px;font-weight:500;color:var(--ink-muted);padding:12px 18px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;border-radius:var(--radius-sm) var(--radius-sm) 0 0}.tab:hover{color:var(--ink);background:var(--surface-sunken)}.tab.active{color:var(--brand-text);border-bottom-color:var(--brand);background:var(--brand-soft)}
+    .section{display:none;opacity:0;animation:fade-up .4s var(--ease) forwards}.section.active{display:block}
+    .card{background:var(--surface-raised);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:clamp(20px,3vw,28px);margin-bottom:20px;box-shadow:var(--shadow-sm)}.card h3{font-family:'Fraunces',serif;font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px}.card p{font-size:14px;line-height:1.7;color:var(--ink-soft);margin-bottom:16px}
+    .code-block{background:oklch(0.15 0.02 260);color:oklch(0.88 0.01 260);border-radius:var(--radius-md);padding:18px 20px;font-family:'SF Mono','Fira Code',monospace;font-size:13px;line-height:1.7;overflow-x:auto;margin-bottom:16px;position:relative}.code-block .cmt{color:oklch(0.55 0.01 260)}.code-block .str{color:oklch(0.72 0.14 145)}.code-block .kw{color:oklch(0.72 0.15 265)}.code-block .fn{color:oklch(0.78 0.12 50)}
+    .copy-btn{position:absolute;top:10px;right:10px;font-family:inherit;font-size:11px;padding:4px 10px;background:oklch(0.25 0.02 260);color:oklch(0.7 0.01 260);border:1px solid oklch(0.3 0.02 260);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s}.copy-btn:hover{background:oklch(0.3 0.02 260);color:oklch(0.9 0.01 260)}
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}.feature{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--surface-sunken);border-radius:var(--radius-md)}.feature-icon{font-size:18px;flex-shrink:0;margin-top:1px}.feature-text{font-size:13px;line-height:1.5;color:var(--ink-soft)}.feature-text strong{color:var(--ink);display:block;margin-bottom:2px}
+    .steps{counter-reset:step}.step{display:flex;gap:16px;margin-bottom:24px}.step::before{counter-increment:step;content:counter(step);width:28px;height:28px;background:var(--brand-soft);color:var(--brand-text);border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:2px}.step-content h4{font-size:14px;font-weight:600;margin-bottom:4px}.step-content p{font-size:13px;color:var(--ink-soft);line-height:1.6}
+    .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:4px 10px;border-radius:100px}.badge-brand{background:var(--brand-soft);color:var(--brand-text)}.badge-accent{background:var(--accent-soft);color:oklch(0.38 0.1 145)}.badge-warm{background:var(--warm-soft);color:oklch(0.42 0.1 50)}.badge-danger{background:var(--danger-soft);color:var(--danger)}
+    .tool-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}.tool-table th{text-align:left;font-weight:600;padding:10px 12px;border-bottom:2px solid var(--border);color:var(--ink)}.tool-table td{padding:10px 12px;border-bottom:1px solid var(--border-light);color:var(--ink-soft)}.tool-table tr:hover td{background:var(--surface-sunken)}.tool-table code{font-family:'SF Mono',monospace;font-size:12px;background:var(--surface-sunken);padding:2px 6px;border-radius:4px}
+    .alert{padding:14px 18px;border-radius:var(--radius-md);font-size:13px;line-height:1.6;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}.alert-warn{background:var(--warm-soft);border:1px solid oklch(0.85 0.06 50)}.alert-info{background:var(--brand-soft);border:1px solid oklch(0.85 0.04 265)}
+    .key-list{margin-top:16px}.key-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-sunken);border-radius:var(--radius-md);margin-bottom:8px}.key-item .key-name{font-weight:500;font-size:13px;flex:1}.key-item .key-prefix{font-family:'SF Mono',monospace;font-size:12px;color:var(--ink-muted);background:var(--surface-raised);padding:2px 8px;border-radius:4px}.key-item .key-scope{font-size:11px;padding:3px 8px;border-radius:100px}.key-item .btn-revoke{font-size:11px;color:var(--danger);background:none;border:1px solid var(--danger-soft);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit}.key-item .btn-revoke:hover{background:var(--danger-soft)}
+    footer{border-top:1px solid var(--border-light);padding:24px clamp(20px,5vw,48px);text-align:center;font-size:12px;color:var(--ink-muted);margin-top:48px}footer a{color:var(--brand-text)}
+    @keyframes fade-up{to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.page-header,.tabs,.section,.key-banner{animation:none;opacity:1;transform:none}}@media(max-width:600px){.features{grid-template-columns:1fr}.key-banner{flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="logo"><div class="logo-mark">R</div><span class="logo-text">RelyIQ</span></a>
+    <nav class="nav-links">
+      <a href="/product">Demo</a>
+      <a href="/integrations" style="color:var(--brand-text)">Integrations</a>
+      <a href="/login" class="cta">Sign in</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div class="page-header">
+      <h1>Integrations</h1>
+      <p>Connect RelyIQ to your development workflow via MCP, CLI, or Skills. All integrations require a RelyIQ API key generated from your dashboard.</p>
+    </div>
+
+    <!-- Key requirement banner -->
+    <div class="key-banner" id="key-banner">
+      <span class="icon">🔑</span>
+      <div class="text">
+        <strong>API Key Required</strong>
+        <span>All integrations authenticate via a RelyIQ API key. Generate one from your dashboard or sign in to create one here.</span>
+      </div>
+      <button class="btn-gen" onclick="generateKey()">Generate Key</button>
+    </div>
+
+    <!-- Key management section (shown when logged in) -->
+    <div class="card" id="key-mgmt" style="display:none;">
+      <h3>Your API Keys</h3>
+      <p>Keys are shown only once at creation. Store them securely.</p>
+      <div class="key-list" id="key-list"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="key-scope" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;">
+          <option value="mcp">MCP Server</option>
+          <option value="cli">CLI</option>
+          <option value="agent">Agent</option>
+          <option value="skill">Skill</option>
+        </select>
+        <input type="text" id="key-name" placeholder="Key name (e.g. Production MCP)" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;min-width:180px;">
+        <button class="btn-gen" onclick="createKey()">Create Key</button>
+      </div>
+      <div id="new-key-display" style="display:none;margin-top:12px;padding:14px;background:var(--accent-soft);border-radius:var(--radius-md);">
+        <strong style="font-size:12px;display:block;margin-bottom:4px;">⚠️ Copy this key now — it won't be shown again:</strong>
+        <code id="new-key-value" style="font-family:'SF Mono',monospace;font-size:13px;word-break:break-all;"></code>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" data-tab="mcp">MCP Server</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="cli">CLI</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="skills">Skills</button>
+    </div>
+
+    <!-- ─── MCP Section ──────────────────────────────────────────────── -->
+    <div class="section active" id="tab-mcp" role="tabpanel">
+      <div class="card">
+        <span class="badge badge-brand">Model Context Protocol</span>
+        <h3 style="margin-top:12px">AI-Powered HR Access from Your IDE</h3>
+        <p>The RelyIQ MCP server exposes your HR knowledge base as tools that any MCP-compatible AI assistant (Kiro, Claude, Cursor, etc.) can call directly.</p>
+        <div class="alert alert-warn">⚠️ <span>A <strong>RelyIQ API key</strong> is mandatory. Generate one above, then set it as <code>REPLYIQ_API_KEY</code> in your MCP config.</span></div>
+        <div class="features">
+          <div class="feature"><span class="feature-icon">🔍</span><div class="feature-text"><strong>ask_kb</strong>Ask HR questions with cited answers</div></div>
+          <div class="feature"><span class="feature-icon">📋</span><div class="feature-text"><strong>list_documents</strong>Browse knowledge base docs</div></div>
+          <div class="feature"><span class="feature-icon">⚠️</span><div class="feature-text"><strong>list_escalations</strong>View unresolved questions</div></div>
+          <div class="feature"><span class="feature-icon">📊</span><div class="feature-text"><strong>get_analytics</strong>Chat stats and resolution rates</div></div>
+          <div class="feature"><span class="feature-icon">🔑</span><div class="feature-text"><strong>exchange_token</strong>Exchange key for session JWT</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Setup</h3>
+        <div class="steps">
+          <div class="step"><div class="step-content"><h4>Generate an API key</h4><p>Sign in → Dashboard → Settings → API Keys → Create with scope "mcp"</p></div></div>
+          <div class="step"><div class="step-content"><h4>Add MCP config</h4><p>Add to <code>.kiro/settings/mcp.json</code> (Kiro) or your client's MCP config:</p></div></div>
+        </div>
+        <div class="code-block" id="mcp-config"><button class="copy-btn" onclick="copyCode('mcp-config')">Copy</button><span class="cmt">// .kiro/settings/mcp.json</span>
+{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"relyiq"</span>: {
+      <span class="str">"command"</span>: <span class="str">"python"</span>,
+      <span class="str">"args"</span>: [<span class="str">"-m"</span>, <span class="str">"hermes.tools.mcp_server"</span>],
+      <span class="str">"env"</span>: {
+        <span class="str">"REPLYIQ_ADMIN_API_URL"</span>: <span class="str">"https://your-app.onrender.com"</span>,
+        <span class="str">"REPLYIQ_API_KEY"</span>: <span class="str">"riq_your-key-here"</span>
+      }
+    }
+  }
+}</div>
+        <div class="steps" style="margin-top:16px">
+          <div class="step"><div class="step-content"><h4>Restart MCP client</h4><p>In Kiro, the server reconnects automatically. For Claude Desktop, restart the app.</p></div></div>
+          <div class="step"><div class="step-content"><h4>Start using</h4><p>Ask: "What's the PTO policy?" — the AI calls <code>ask_kb</code> and returns a cited answer. All sessions are tracked as <code>mcp</code> type.</p></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Available Tools</h3>
+        <table class="tool-table">
+          <thead><tr><th>Tool</th><th>Description</th><th>Auth</th></tr></thead>
+          <tbody>
+            <tr><td><code>get_health</code></td><td>Check app + DB status</td><td>API Key</td></tr>
+            <tr><td><code>list_documents</code></td><td>List KB documents for tenant</td><td>API Key</td></tr>
+            <tr><td><code>list_escalations</code></td><td>View flagged questions</td><td>API Key</td></tr>
+            <tr><td><code>get_analytics</code></td><td>Chat analytics summary</td><td>API Key</td></tr>
+            <tr><td><code>ask_kb</code></td><td>Ask an HR question with citations</td><td>API Key</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── CLI Section ──────────────────────────────────────────────── -->
+    <div class="section" id="tab-cli" role="tabpanel">
+      <div class="card">
+        <span class="badge badge-accent">Command Line Interface</span>
+        <h3 style="margin-top:12px">Hermes CLI</h3>
+        <p>Full-featured CLI for managing your RelyIQ instance. Same capabilities as MCP but with more options, batch operations, and CI/CD integration.</p>
+        <div class="alert alert-warn">⚠️ <span>A <strong>RelyIQ API key</strong> is mandatory. Set <code>REPLYIQ_API_KEY</code> in your environment or <code>hermes/.env</code>.</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Installation</h3>
+        <div class="code-block" id="cli-install"><button class="copy-btn" onclick="copyCode('cli-install')">Copy</button><span class="cmt"># Clone and install</span>
+<span class="kw">git clone</span> https://github.com/your-org/hr-faq-bot.git
+<span class="kw">cd</span> hr-faq-bot/hermes
+<span class="kw">pip install</span> -r requirements.txt
+
+<span class="cmt"># Configure (API key is mandatory)</span>
+<span class="kw">cp</span> .env.example .env
+<span class="cmt"># Edit .env:</span>
+<span class="cmt"># REPLYIQ_ADMIN_API_URL=https://your-app.onrender.com</span>
+<span class="cmt"># REPLYIQ_API_KEY=riq_your-key-here</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Commands</h3>
+        <table class="tool-table">
+          <thead><tr><th>Command</th><th>Description</th><th>Options</th></tr></thead>
+          <tbody>
+            <tr><td><code>hermes infra-agent-health</code></td><td>Check deployment health</td><td><code>--json</code> <code>--verbose</code></td></tr>
+            <tr><td><code>hermes infra-agent-deploy</code></td><td>Verify latest deployment</td><td><code>--wait</code> <code>--timeout=60</code></td></tr>
+            <tr><td><code>hermes infra-agent-summarize</code></td><td>Summarize recent incidents</td><td><code>--days=7</code> <code>--format=md</code></td></tr>
+            <tr><td><code>hermes kb-agent</code></td><td>KB maintenance suggestions</td><td><code>--tenant=SLUG</code> <code>--auto-fix</code></td></tr>
+            <tr><td><code>hermes growth-agent</code></td><td>Generate outreach content</td><td><code>--lang=en,es,de</code> <code>--channels=linkedin</code></td></tr>
+            <tr><td><code>hermes analytics-agent</code></td><td>Collect growth analytics</td><td><code>--days=30</code> <code>--export=csv</code></td></tr>
+            <tr><td><code>hermes support-agent</code></td><td>Incident summaries</td><td><code>--severity=high</code></td></tr>
+            <tr><td><code>hermes product-agent</code></td><td>Product recommendations</td><td><code>--scope=ux,perf</code></td></tr>
+            <tr><td><code>hermes leads-agent</code></td><td>Lead outreach generation</td><td><code>--limit=50</code> <code>--since=24h</code></td></tr>
+            <tr><td><code>hermes memory-agent</code></td><td>Prune stale memory entries</td><td><code>--older-than=30d</code></td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px;color:var(--ink-muted)">All commands support <code>--dry-run</code>, <code>--json</code> output, and <code>--verbose</code> logging.</p>
+      </div>
+
+      <div class="card">
+        <h3>Usage Examples</h3>
+        <div class="code-block" id="cli-examples"><button class="copy-btn" onclick="copyCode('cli-examples')">Copy</button><span class="cmt"># Health check (JSON output for scripting)</span>
+<span class="kw">python</span> -m hermes.cli infra-agent-health --json
+
+<span class="cmt"># KB audit for a specific tenant</span>
+<span class="kw">python</span> -m hermes.cli kb-agent --tenant=acme-corp
+
+<span class="cmt"># Generate outreach in multiple languages</span>
+<span class="kw">python</span> -m hermes.cli growth-agent --lang=en,es,de --channels=linkedin,reddit
+
+<span class="cmt"># Export analytics to CSV</span>
+<span class="kw">python</span> -m hermes.cli analytics-agent --days=30 --export=csv
+
+<span class="cmt"># Dry run (preview without side effects)</span>
+<span class="kw">python</span> -m hermes.cli leads-agent --limit=20 --dry-run
+
+<span class="cmt"># CI/CD: post-deploy verification with timeout</span>
+<span class="kw">python</span> -m hermes.cli infra-agent-deploy --wait --timeout=120</div>
+      </div>
+
+      <div class="card">
+        <h3>CI/CD Integration</h3>
+        <div class="code-block" id="cli-cicd"><button class="copy-btn" onclick="copyCode('cli-cicd')">Copy</button><span class="cmt"># GitHub Actions</span>
+- name: Verify deployment
+  run: python -m hermes.cli infra-agent-deploy --wait
+  env:
+    REPLYIQ_ADMIN_API_URL: ${{ secrets.RELYIQ_URL }}
+    RELYIQ_API_KEY: ${{ secrets.RELYIQ_API_KEY }}
+
+- name: KB health check
+  run: python -m hermes.cli kb-agent --json
+  env:
+    REPLYIQ_API_KEY: ${{ secrets.RELYIQ_API_KEY }}</div>
+        <p>All CLI sessions are tracked as <code>cli</code> session type for monitoring.</p>
+      </div>
+    </div>
+
+    <!-- ─── Skills Section ───────────────────────────────────────────── -->
+    <div class="section" id="tab-skills" role="tabpanel">
+      <div class="card">
+        <span class="badge badge-warm">Downloadable Skills</span>
+        <h3 style="margin-top:12px">Install & Run Skills</h3>
+        <p>Skills are downloadable workflow packages that integrate RelyIQ into Claude, Kiro, or any MCP-compatible AI. Install via URL, authenticate with your API key, and the skill handles the rest.</p>
+        <div class="alert alert-warn">⚠️ <span>A <strong>RelyIQ API key</strong> (scope: <code>skill</code>) is mandatory. The skill will prompt for your key on first run.</span></div>
+      </div>
+
+      <div class="card">
+        <h3>How Skills Work</h3>
+        <div class="steps">
+          <div class="step"><div class="step-content"><h4>Download via URL</h4><p>Each skill has a public URL. Add it to your AI client (Claude, Kiro) as an MCP server or steering file.</p></div></div>
+          <div class="step"><div class="step-content"><h4>Authenticate with API key</h4><p>On first run, the skill prompts for your RelyIQ API key. This key must be generated by a human user (owner) from the dashboard.</p></div></div>
+          <div class="step"><div class="step-content"><h4>Skill runs autonomously</h4><p>The skill uses your key to authenticate as an agent, with all interactions tracked under the <code>skill</code> session type.</p></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Available Skills</h3>
+        <table class="tool-table">
+          <thead><tr><th>Skill</th><th>Install URL</th><th>What It Does</th></tr></thead>
+          <tbody>
+            <tr><td><code>kb-maintenance</code></td><td><a href="/integrations/skills/kb-maintenance" style="color:var(--brand-text)">/integrations/skills/kb-maintenance</a></td><td>Audit KB coverage, suggest additions, validate accuracy</td></tr>
+            <tr><td><code>escalation-triage</code></td><td><a href="/integrations/skills/escalation-triage" style="color:var(--brand-text)">/integrations/skills/escalation-triage</a></td><td>Review and prioritize open escalations</td></tr>
+            <tr><td><code>outreach-gen</code></td><td><a href="/integrations/skills/outreach-gen" style="color:var(--brand-text)">/integrations/skills/outreach-gen</a></td><td>Generate multilingual community outreach</td></tr>
+            <tr><td><code>deploy-verify</code></td><td><a href="/integrations/skills/deploy-verify" style="color:var(--brand-text)">/integrations/skills/deploy-verify</a></td><td>Post-deploy health verification</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Installing a Skill in Claude Desktop</h3>
+        <div class="code-block" id="skill-claude"><button class="copy-btn" onclick="copyCode('skill-claude')">Copy</button><span class="cmt">// claude_desktop_config.json</span>
+{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"relyiq-kb-maintenance"</span>: {
+      <span class="str">"command"</span>: <span class="str">"python"</span>,
+      <span class="str">"args"</span>: [<span class="str">"-m"</span>, <span class="str">"hermes.tools.mcp_server"</span>],
+      <span class="str">"env"</span>: {
+        <span class="str">"REPLYIQ_ADMIN_API_URL"</span>: <span class="str">"https://your-app.onrender.com"</span>,
+        <span class="str">"RELYIQ_API_KEY"</span>: <span class="str">"riq_your-skill-key"</span>,
+        <span class="str">"RELYIQ_SKILL"</span>: <span class="str">"kb-maintenance"</span>
+      }
+    }
+  }
+}</div>
+      </div>
+
+      <div class="card">
+        <h3>Installing a Skill in Kiro</h3>
+        <div class="code-block" id="skill-kiro"><button class="copy-btn" onclick="copyCode('skill-kiro')">Copy</button><span class="cmt"># Download the steering file</span>
+<span class="kw">curl</span> -o .kiro/steering/kb-maintenance.md \
+  https://your-app.onrender.com/integrations/skills/kb-maintenance
+
+<span class="cmt"># The skill will ask for your API key on first use</span>
+<span class="cmt"># Or set it in .kiro/settings/mcp.json</span></div>
+        <p>Skills authenticate independently — each skill session is tracked separately for monitoring. Only human-generated keys are accepted.</p>
+      </div>
+
+      <div class="card">
+        <h3>Agent Authentication Flow</h3>
+        <p>All agents (MCP, CLI, Skills) authenticate independently using API keys generated by human users:</p>
+        <div class="code-block" id="skill-auth"><button class="copy-btn" onclick="copyCode('skill-auth')">Copy</button><span class="cmt"># 1. Agent presents API key</span>
+POST /api/keys/exchange
+X-API-Key: riq_your-key-here
+
+<span class="cmt"># 2. Server returns short-lived JWT (30 min)</span>
+{
+  "access_token": "eyJ...",
+  "session_type": "skill",  <span class="cmt">// or "mcp", "cli", "agent"</span>
+  "tenant_slug": "acme-corp",
+  "expires_in": 1800
+}
+
+<span class="cmt"># 3. Agent uses JWT for subsequent API calls</span>
+POST /api/chat/acme-corp/message
+Authorization: Bearer eyJ...
+
+<span class="cmt"># All interactions are logged with session_type for monitoring</span></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 RelyIQ &middot; <a href="/product">Try the demo</a> &middot; <a href="/">Home</a> &middot; <a href="/login">Sign in</a></p>
+  </footer>
+
+  <script>
+    // ─── Tab switching ────────────────────────────────────────────────
+    const tabs = document.querySelectorAll('.tab');
+    const sections = document.querySelectorAll('.section');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+        tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+        sections.forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        const section = document.getElementById('tab-' + target);
+        section.classList.add('active');
+        section.style.animation = 'none';
+        section.offsetHeight;
+        section.style.animation = 'fade-up 0.4s cubic-bezier(0.16,1,0.3,1) forwards';
+      });
+    });
+
+    // ─── Copy code ───────────────────────────────────────────────────
+    function copyCode(id) {
+      const block = document.getElementById(id);
+      const text = block.textContent.replace('Copy', '').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = block.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      });
+    }
+
+    // ─── Key Management ──────────────────────────────────────────────
+    const token = localStorage.getItem('jwt_token');
+
+    function generateKey() {
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      document.getElementById('key-mgmt').style.display = 'block';
+      document.getElementById('key-banner').style.display = 'none';
+      loadKeys();
+    }
+
+    async function loadKeys() {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/keys', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 401) { localStorage.removeItem('jwt_token'); window.location.href = '/login'; return; }
+        if (!res.ok) return;
+        const keys = await res.json();
+        renderKeys(keys);
+      } catch (e) { console.error(e); }
+    }
+
+    function renderKeys(keys) {
+      const list = document.getElementById('key-list');
+      if (!keys.length) { list.innerHTML = '<p style="font-size:13px;color:var(--ink-muted);padding:8px 0;">No keys yet. Create one below.</p>'; return; }
+      list.innerHTML = keys.map(k => `
+        <div class="key-item">
+          <span class="key-name">${k.name}</span>
+          <span class="key-prefix">${k.key_prefix}...</span>
+          <span class="key-scope badge badge-${k.scope === 'mcp' ? 'brand' : k.scope === 'cli' ? 'accent' : 'warm'}">${k.scope}</span>
+          <span style="font-size:11px;color:var(--ink-muted)">${k.is_active ? 'Active' : 'Revoked'}</span>
+          ${k.is_active ? `<button class="btn-revoke" onclick="revokeKey(${k.id})">Revoke</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    async function createKey() {
+      if (!token) { window.location.href = '/login'; return; }
+      const scope = document.getElementById('key-scope').value;
+      const name = document.getElementById('key-name').value.trim() || `${scope} key`;
+      try {
+        const res = await fetch('/api/keys', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, scope, permissions: 'read,write' })
+        });
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+        if (!res.ok) { alert(data.detail || 'Failed to create key'); return; }
+        // Show the full key (only time it's visible)
+        document.getElementById('new-key-display').style.display = 'block';
+        document.getElementById('new-key-value').textContent = data.full_key;
+        document.getElementById('key-name').value = '';
+        loadKeys();
+      } catch (e) { alert('Error creating key'); }
+    }
+
+    async function revokeKey(id) {
+      if (!confirm('Revoke this key? This cannot be undone.')) return;
+      try {
+        await fetch('/api/keys/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        loadKeys();
+      } catch (e) { alert('Error revoking key'); }
+    }
+
+    // Auto-show key management if logged in
+    if (token) {
+      document.getElementById('key-mgmt').style.display = 'block';
+      document.getElementById('key-banner').style.display = 'none';
+      loadKeys();
+    }
+  </script>
+</body>
+</html>

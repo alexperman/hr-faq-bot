@@ -19,10 +19,11 @@ Cold Traffic → Pre-sell Page → Landing Page → Product
 
 | File | Purpose |
 |------|---------|
-| `presell.html` | Advertorial / pre-sell page — warms cold traffic, builds belief before the product ask |
 | `index.html` | Landing page — full conversion funnel with testimonials, pricing, objections handled |
 | `product.html` | Working product — chat UI for employees to ask HR questions |
-| `backend/app.py` | Flask API — knowledge base storage + Groq LLM integration |
+| `integrations.html` | Standalone integrations page — MCP, CLI, and Skills documentation |
+| `backend/app/main.py` | FastAPI app — multi-tenant SaaS with Groq LLM integration |
+| `hermes/` | Operational agent suite — CLI tools, MCP server, skills |
 | `backend/requirements.txt` | Python dependencies |
 
 ---
@@ -50,10 +51,11 @@ Cold Traffic → Pre-sell Page → Landing Page → Product
 4. **Product Hunt** launch when ready
 5. **$50 LinkedIn ads** targeting HR roles — validate before scaling
 
-### Pre-sell Flow (Cold Traffic Principle #10)
-- Traffic from ads/links lands on `presell.html` first
-- Article builds belief, answers objections, then links to `index.html`
-- CTA on presell page sends warm traffic to landing page
+### Integrations (MCP + CLI + Skills)
+- **MCP Server:** AI assistants can query the HR knowledge base directly from the IDE
+- **CLI:** `python -m hermes.cli <agent>` for automation and CI/CD
+- **Skills:** Steering files in `.kiro/steering/` for guided workflows
+- See `/integrations` page for full documentation
 
 ---
 
@@ -68,10 +70,9 @@ python app.py
 ```
 Backend runs on `http://localhost:5000`
 
-### Frontend (Landing + Presell)
+### Frontend (Landing + Integrations)
 ```bash
 # Just open in browser
-open presell.html   # pre-sell / article page
 open index.html     # landing/conversion page
 ```
 
@@ -102,8 +103,7 @@ DELETE /api/reset        → clear all documents
 1. **Get GROQ API key** → enable actual AI answers
 2. **Deploy backend** → Render.com free tier or Railway
 3. **Deploy frontend** → Netlify (drag-and-drop `index.html`)
-4. **Create waitlist** → Carrd.co ($16/yr) linked from presell
-5. **Run $50 LinkedIn ad test** → validate demand before building more
+4. **Run $50 LinkedIn ad test** → validate demand before building more
 
 ---
 
@@ -120,5 +120,5 @@ DELETE /api/reset        → clear all documents
 | Strong offer | 14-day trial + $199 HR assessment bonus |
 | Remove friction | FAQ section handles objections before checkout |
 | CTA = next step | "Start Free Trial" repeated + "Book a demo" fallback |
-| Pre-sell step | `presell.html` article warms traffic before product ask |
+| Pre-sell step | Replaced by `/integrations` — MCP + CLI + Skills for developer adoption |
 

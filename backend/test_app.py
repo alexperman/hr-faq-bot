@@ -99,8 +99,8 @@ class TestHTMLPages:
         r = client.get("/index")
         assert r.status_code == 200
 
-    def test_presell_serves(self, client):
-        r = client.get("/presell")
+    def test_integrations_serves(self, client):
+        r = client.get("/integrations")
         assert r.status_code == 200
 
     def test_product_serves(self, client):
