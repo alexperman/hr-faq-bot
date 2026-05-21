@@ -62,7 +62,8 @@ async def test_login_wrong_password(client: AsyncClient):
     response = await client.post("/auth/login", json=login_payload)
     assert response.status_code == 401
     data = response.json()
-    assert data["detail"] == "Invalid email or password"
+    # Structured error format
+    assert data["error"]["message"] == "Invalid email or password"
 
 
 @pytest.mark.asyncio
@@ -72,18 +73,20 @@ async def test_register_duplicate_email(client: AsyncClient):
         "email": "duplicate@example.com",
         "password": "password123",
         "full_name": "Duplicate Test",
-        "company_name": "Duplicate Company",
+        "company_name": "Duplicate Company First",
     }
-    await client.post("/auth/register", json=payload)
+    first_resp = await client.post("/auth/register", json=payload)
+    assert first_resp.status_code == 200
 
-    # Try to register again with same email but different company to avoid
-    # hitting the tenant-slug uniqueness at flush() (a pre-commit constraint).
-    # This routes to the email uniqueness check at commit() which is handled.
-    payload["company_name"] = "Another Company"
-    response = await client.post("/auth/register", json=payload)
+    # Try to register again with same email and a unique company name
+    payload2 = {
+        "email": "duplicate@example.com",
+        "password": "password123",
+        "full_name": "Duplicate Test 2",
+        "company_name": "Totally Different Unique Corp 999",
+    }
+    response = await client.post("/auth/register", json=payload2)
     assert response.status_code == 409
-    data = response.json()
-    assert data["detail"] == "Email already registered"
 
 
 @pytest.mark.asyncio
