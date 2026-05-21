@@ -44,7 +44,11 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
     slug = slugify(data.company_name)
     tenant = Tenant(name=data.company_name, slug=slug)
     db.add(tenant)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Email already registered")
 
     # Create user (owner)
     password_hash = hash_password(data.password)
@@ -56,7 +60,11 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
         is_owner=True,
     )
     db.add(user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Email already registered")
 
     lead_result = await db.execute(select(Lead).where(Lead.email == data.email))
     existing_lead = lead_result.scalar_one_or_none()
@@ -329,6 +337,62 @@ async def set_user_role(
     return {"id": user.id, "email": user.email, "is_owner": user.is_owner}
 class BotTokenRequest(BaseModel):
     email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Request a password reset. Returns a reset token (in production, email this)."""
+    from app.services.auth import create_password_reset_token
+
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+
+    # Always return success to prevent email enumeration
+    if user is None:
+        return {"message": "If that email exists, a reset link has been sent."}
+
+    token = create_password_reset_token(user.id, user.email)
+
+    # In production: send email with reset link containing this token
+    # For now, return the token directly (dev mode)
+    return {
+        "message": "If that email exists, a reset link has been sent.",
+        "reset_token": token,  # Remove in production — send via email instead
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Reset password using a valid reset token."""
+    from app.services.auth import verify_password_reset_token
+
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    payload = verify_password_reset_token(data.token)
+    if payload is None:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    user_id = payload.get("user_id")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    user.password_hash = hash_password(data.new_password)
+    await db.commit()
+
+    return {"message": "Password reset successfully. You can now sign in."}
 
 
 @router.post("/bot/token", response_model=Token)

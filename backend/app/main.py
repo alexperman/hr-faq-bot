@@ -18,6 +18,7 @@ from app.models import Tenant, User, Subscription, Document
 from app.routers import auth, kb, chat, billing, leads, demo
 from app.routers import admin
 from app.routers import escalations
+from app.routers import api_keys
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -184,6 +185,7 @@ app.include_router(leads.router)
 app.include_router(demo.router)
 app.include_router(admin.router)
 app.include_router(escalations.router)
+app.include_router(api_keys.router)
 
 
 # ─── Structured error responses ─────────────────────────────────────────
@@ -212,13 +214,20 @@ async def structured_http_exception_handler(request: Request, exc: HTTPException
 @app.exception_handler(RequestValidationError)
 async def structured_validation_exception_handler(request: Request, exc: RequestValidationError):
     log_event(event="validation_error", severity="medium", path=request.url.path)
+    # Sanitize errors for JSON serialization (ctx values may not be serializable)
+    errors = []
+    for err in exc.errors():
+        clean_err = {k: v for k, v in err.items() if k != "ctx"}
+        if "ctx" in err and err["ctx"]:
+            clean_err["ctx"] = {k: str(v) for k, v in err["ctx"].items()}
+        errors.append(clean_err)
     return JSONResponse(
         status_code=422,
         content={
             "error": {
                 "code": "validation_error",
                 "message": "Request validation failed",
-                "details": exc.errors(),
+                "details": errors,
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
         },
@@ -254,9 +263,24 @@ async def login_page():
     return FileResponse(TEMPLATES_DIR / "login.html")
 
 
-@app.get("/presell")
-async def presell_page():
-    return FileResponse(TEMPLATES_DIR / "presell.html")
+@app.get("/integrations")
+async def integrations_page():
+    return FileResponse(TEMPLATES_DIR / "integrations.html")
+
+
+@app.get("/integrations/skills/{skill_name}")
+async def download_skill(skill_name: str):
+    """Serve skill steering files for download/installation."""
+    from fastapi.responses import PlainTextResponse
+
+    skills_dir = Path(__file__).parent.parent.parent / ".kiro" / "steering"
+    skill_file = skills_dir / f"{skill_name}.md"
+
+    if not skill_file.exists():
+        raise HTTPException(status_code=404, detail=f"Skill '{skill_name}' not found")
+
+    content = skill_file.read_text(encoding="utf-8")
+    return PlainTextResponse(content, media_type="text/markdown")
 
 
 @app.get("/product")
