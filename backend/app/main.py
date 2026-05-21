@@ -18,7 +18,7 @@ from app.models import Tenant, User, Subscription, Document
 from app.routers import auth, kb, chat, billing, leads, demo
 from app.routers import admin
 from app.routers import escalations
-from app.routers import telegram_bot
+
 from app.routers import api_keys
 
 from sqlalchemy import select
@@ -186,7 +186,6 @@ app.include_router(leads.router)
 app.include_router(demo.router)
 app.include_router(admin.router)
 app.include_router(escalations.router)
-app.include_router(telegram_bot.router)
 app.include_router(api_keys.router)
 
 
