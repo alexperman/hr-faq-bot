@@ -206,10 +206,15 @@ async def telegram_webhook(bot_token: str, request: Request):
     _load_env()
 
     # Debug: log env vars present
-    from app.services.structured_logger import log_event
-    log_event(event="telegram_webhook_hit", env_exists=str(env_path.exists()),
-              token_growth=os.environ.get("TELEGRAM_BOT_TOKEN","")[:10],
-              token_infra=os.environ.get("TELEGRAM_BOT_TOKEN_INFRA","")[:10])
+    token_map = {
+        "TELEGRAM_BOT_TOKEN": "TELEGRAM_CHAT_GROWTH",
+        "TELEGRAM_BOT_TOKEN_INFRA": "TELEGRAM_CHAT_INFRA",
+        "TELEGRAM_BOT_TOKEN_MEMORY": "TELEGRAM_CHAT_MEMORY",
+        "TELEGRAM_BOT_TOKEN_PRODUCT": "TELEGRAM_CHAT_PRODUCT",
+        "TELEGRAM_BOT_TOKEN_CRITICAL": "TELEGRAM_CHAT_CRITICAL",
+    }
+    env_tokens = {k: (v[:10]+"..." if v else "MISSING") for k, v in [(k, os.environ.get(k,"")) for k in token_map]}
+    log_event(event="telegram_webhook_hit", path=str(env_path), exists=str(env_path.exists()), env_tokens=env_tokens)
 
     try:
         body = await request.json()
