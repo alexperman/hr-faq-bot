@@ -19,7 +19,8 @@ _BOT_HANDLERS = {}
 
 def _load_env():
     """Load hermes .env into os.environ."""
-    env_path = Path(__file__).resolve().parents[2] / "hermes" / ".env"
+    # The hermes dir is a sibling of backend/, not inside it
+    env_path = Path(__file__).resolve().parents[3] / "hermes" / ".env"
     if not env_path.exists():
         return
     for line in env_path.read_text(encoding="utf-8").splitlines():
