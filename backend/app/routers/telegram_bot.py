@@ -305,16 +305,8 @@ async def telegram_webhook(bot_token: str, request: Request):
     return JSONResponse({"ok": True})
 
 
-@router.get("/{bot_token}/webhook")
-async def telegram_webhook_info(bot_token: str):
-    """Webhook registration info — set this URL in Telegram bot settings."""
-    config = _get_bot_config(bot_token)
-    if not config:
-        raise HTTPException(status_code=404, detail="Unknown bot token")
-    channel_env, chat_id = config
-    return {
-        "status": "configured",
-        "bot": channel_env,
-        "webhook_url": f"/telegram/{bot_token}/webhook",
-        "chat_id": chat_id,
-    }
+@router.get("/test_webhook")
+async def telegram_test():
+    """Test endpoint to verify the router is mounted."""
+    log_event(event="test_webhook_hit", msg="test endpoint reached")
+    return JSONResponse({"ok": True, "msg": "test endpoint works"})
