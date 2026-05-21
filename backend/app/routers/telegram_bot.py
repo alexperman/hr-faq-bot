@@ -128,18 +128,23 @@ def _handle_product(text: str, chat_id: str) -> str:
 
 
 def _handle_infra(text: str, chat_id: str) -> str:
+    log_event(event="handler_start", handler="infra", text=text[:50], chat_id=chat_id)
     try:
         sys_path = str(Path(__file__).resolve().parents[3])
         import sys
         sys.path.insert(0, sys_path)
         from hermes.tools.env import load_env
         load_env(str(Path(__file__).resolve().parents[3] / "hermes" / ".env"))
-        from hermes.agents.infra_agent import run_infra_health_check
-        import argparse
-        args = argparse.Namespace(message=text, chat_id=chat_id, dry_run=False)
-        run_infra_health_check(args)
-        return "Infra agent processed your message"
+        from hermes.tools.telegram import post_message
+
+        reply = f"Infra agent received: {text}"
+        post_message('TELEGRAM_CHAT_INFRA', f"Infra agent received your message: {text}", chat_id=chat_id)
+        log_event(event="handler_reply_sent", handler="infra", reply=reply[:100])
+        return reply
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        log_event(event="handler_error", handler="infra", error=str(e))
         return f"Infra agent error: {e}"
 
 
