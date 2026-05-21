@@ -68,7 +68,7 @@ def _handle_growth(text: str, chat_id: str) -> str:
 
         # Simple echo/reply handler — agent gets the message and can respond
         reply = f"Growth agent received: {text}"
-        post_message('TELEGRAM_CHAT_GROWTH', f"Growth agent received your message: {text}", chat_id=chat_id)
+        post_message('TELEGRAM_CHAT_GROWTH', f"Growth agent received your message: {text}")
         log_event(event="handler_reply_sent", handler="growth", reply=reply[:100])
         return reply
     except Exception as e:
@@ -138,7 +138,7 @@ def _handle_infra(text: str, chat_id: str) -> str:
         from hermes.tools.telegram import post_message
 
         reply = f"Infra agent received: {text}"
-        post_message('TELEGRAM_CHAT_INFRA', f"Infra agent received your message: {text}", chat_id=chat_id)
+        post_message('TELEGRAM_CHAT_INFRA', f"Infra agent received your message: {text}")
         log_event(event="handler_reply_sent", handler="infra", reply=reply[:100])
         return reply
     except Exception as e:
