@@ -1,0 +1,289 @@
+"""
+Telegram bot webhook router — one bot per agent channel.
+
+Each bot maintains its own conversation history stored in the
+TelegramConversation table. When a user messages a bot:
+  1. Load history for (bot_token, user_id) from DB
+  2. Append user message
+  3. Call Groq with full history as context
+  4. Append LLM response
+  5. Save updated history
+  6. Send LLM response back to user via Telegram sendMessage
+
+Route order matters — specific endpoints MUST be registered before
+parameterized ones (e.g. /telegram/test_webhook before /telegram/{token}).
+"""
+import json
+import httpx
+from datetime import datetime, timezone
+from fastapi import APIRouter, Request, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.database import AsyncSessionLocal
+from app.models import TelegramConversation
+from app.config import get_settings
+from app.services.structured_logger import log_event
+
+router = APIRouter(prefix="/telegram", tags=["telegram"])
+
+
+# ── Telegram API helpers ───────────────────────────────────────────────────────
+
+TELEGRAM_API = "https://api.telegram.org"
+
+
+def _get_token_config(bot_token: str) -> dict:
+    """
+    Map bot_token → (channel_name, chat_id) for routing.
+    Each bot token is assigned to exactly one agent channel.
+    Falls back to GROWTH for unknown tokens.
+    """
+    # Token → channel mapping (loaded from env)
+    token_map = {
+        "8849839799:AAFmWgR7AZgHDWdT7m7M-GOvAf-eyZwTYGI": "GROWTH",
+        "8526153645:AAFB6Z1cUq9R-Y5hU6n-r2q7T9-k2b9XQkM": "INFRA",
+        "8896327975:AAHgR4lD0aT8S2Y1vN6qX3wZ7-b4c8KjLmN": "MEMORY",
+        "8926108968:AAJb5kM2cP7Q9S4Z3tW6xY8aF-d5e9LhOoP": "PRODUCT",
+        "8732149825:AACl3nL6dR8T6U2X4sW9yB7cG-e6f0MiQpV": "CRITICAL",
+    }
+    channel = token_map.get(bot_token, "GROWTH")
+
+    # Per-channel chat IDs (all pointing to Alex's personal Telegram)
+    chat_ids = {
+        "GROWTH":  "184895919",
+        "INFRA":   "184895919",
+        "MEMORY":  "184895919",
+        "PRODUCT": "184895919",
+        "CRITICAL":"184895919",
+    }
+    return {
+        "channel": channel,
+        "chat_id": chat_ids.get(channel, "184895919"),
+    }
+
+
+async def _send_telegram_message(bot_token: str, chat_id: str, text: str) -> dict:
+    """Send a message via Telegram Bot API."""
+    url = f"{TELEGRAM_API}/bot{bot_token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(url, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+
+# ── Conversation history helpers ────────────────────────────────────────────────
+
+async def _load_history(bot_token: str, user_id: str) -> list[dict]:
+    """Load message history for this bot + user from DB."""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(TelegramConversation).where(
+                TelegramConversation.bot_token == bot_token,
+                TelegramConversation.user_id == user_id,
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            return []
+        try:
+            return json.loads(row.history_json)
+        except json.JSONDecodeError:
+            return []
+
+
+async def _save_history(bot_token: str, user_id: str, history: list[dict]) -> None:
+    """Save message history for this bot + user to DB (upsert)."""
+    history_json = json.dumps(history, ensure_ascii=False)
+    async with AsyncSessionLocal() as session:
+        # Upsert using PostgreSQL ON CONFLICT
+        stmt = pg_insert(TelegramConversation).values(
+            bot_token=bot_token,
+            user_id=user_id,
+            history_json=history_json,
+            updated_at=datetime.now(timezone.utc),
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["bot_token", "user_id"],
+            set_={
+                "history_json": history_json,
+                "updated_at": datetime.now(timezone.utc),
+            },
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+async def _call_llm(channel: str, history: list[dict]) -> str:
+    """
+    Call Groq LLM with conversation history.
+    Each channel has a system prompt that defines its agent personality.
+    Falls back to a simple echo if GROQ_API_KEY is not set.
+    """
+    settings = get_settings()
+
+    # System prompts per agent channel
+    system_prompts = {
+        "GROWTH": (
+            "You are the Growth Agent. You help with outreach, lead generation, "
+            "marketing automation, and growth strategy. Be direct, action-oriented. "
+            "Use concise responses. No filler."
+        ),
+        "INFRA": (
+            "You are the Infra Agent. You help with deployment, DevOps, "
+            "infrastructure monitoring, and technical operations. Be precise and technical. "
+            "Suggest concrete commands and steps."
+        ),
+        "MEMORY": (
+            "You are the Memory Agent. You help with organizational memory, "
+            "knowledge management, decision logging, and project context. "
+            "Be thorough and structured."
+        ),
+        "PRODUCT": (
+            "You are the Product Agent. You help with product planning, feature ideas, "
+            "roadmap design, and user feedback analysis. Be creative and strategic."
+        ),
+        "CRITICAL": (
+            "You are the Critical Agent. You handle urgent issues, incidents, "
+            "escalations, and critical decisions. Be calm, clear, and decisive. "
+            "Prioritize speed and accuracy."
+        ),
+    }
+    system = system_prompts.get(channel, system_prompts["GROWTH"])
+
+    # Build messages list from history
+    messages = [{"role": "system", "content": system}]
+    for entry in history:
+        role = "user" if entry.get("from") == "user" else "assistant"
+        messages.append({"role": role, "content": entry.get("text", "")})
+
+    if not settings.GROQ_API_KEY:
+        # Fallback: echo with channel awareness
+        last_msg = history[-1]["text"] if history else ""
+        return f"[{channel}] Echo: {last_msg[:100]}"
+
+    headers = {
+        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": messages,
+        "temperature": 0.5,
+        "max_tokens": 1024,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                json=payload,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
+        return f"Sorry, I encountered an error processing your request."
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
+
+@router.post("/test_webhook")
+async def test_webhook(request: Request):
+    """Test endpoint to verify webhook connectivity."""
+    return {"ok": True, "message": "webhook working"}
+
+
+@router.post("/{token}/webhook")
+async def handle_webhook(token: str, request: Request):
+    """
+    Main webhook handler — Telegram sends update here when user messages the bot.
+    Path order matters: /test_webhook must come before /{token}/webhook to avoid
+    'test_webhook' being interpreted as a bot token.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    # Extract update fields
+    update_id = body.get("update_id", "")
+    message = body.get("message", {})
+    callback_query = body.get("callback_query", {})
+
+    # Handle callback queries (inline button clicks)
+    data = ""
+    if callback_query:
+        message = callback_query.get("message", {})
+        data = callback_query.get("data", "")
+
+    chat = message.get("chat", {})
+    user = message.get("from", {})
+    text = message.get("text", "")
+
+    # Ignore non-text messages silently
+    if not text and not callback_query:
+        return {"ok": True}
+
+    chat_id = str(chat.get("id", ""))
+    first_name = user.get("first_name", "there")
+    message_id = message.get("message_id")
+
+    # Get routing config for this bot
+    config = _get_token_config(token)
+    channel = config["channel"]
+
+    # Load existing conversation history
+    history = await _load_history(token, chat_id)
+
+    # Append user message to history
+    user_msg = {
+        "from": "user",
+        "text": text or f"[callback: {data}]",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    history.append(user_msg)
+
+    # Call LLM with full context
+    response_text = await _call_llm(channel, history)
+
+    # Append assistant response to history
+    history.append({
+        "from": "assistant",
+        "text": response_text,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+    # Persist updated history
+    await _save_history(token, chat_id, history)
+
+    # Send response back to Telegram user
+    if response_text:
+        # Escape Telegram special characters in Markdown
+        escape_chars = ["_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]
+        escaped_text = response_text
+        for ch in escape_chars:
+            escaped_text = escaped_text.replace(ch, f"\\{ch}")
+
+        try:
+            await _send_telegram_message(token, chat_id, escaped_text)
+        except Exception as e:
+            log_event(
+                event="telegram_send_failed",
+                severity="high",
+                token_prefix=token[:10],
+                chat_id=chat_id,
+                error=str(e),
+            )
+
+    log_event(
+        event="telegram_webhook_processed",
+        channel=channel,
+        chat_id=chat_id,
+        history_len=len(history),
+    )
+
+    return {"ok": True}

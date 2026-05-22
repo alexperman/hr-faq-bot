@@ -20,6 +20,7 @@ from app.routers import admin
 from app.routers import escalations
 
 from app.routers import api_keys
+from app.routers import telegram_bot
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -187,6 +188,7 @@ app.include_router(demo.router)
 app.include_router(admin.router)
 app.include_router(escalations.router)
 app.include_router(api_keys.router)
+app.include_router(telegram_bot.router)
 
 
 # ─── Structured error responses ─────────────────────────────────────────

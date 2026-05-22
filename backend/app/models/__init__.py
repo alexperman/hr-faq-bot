@@ -8,8 +8,10 @@ from app.models.chat_message import ChatMessage
 from app.models.lead import Lead
 from app.models.funnel_event import FunnelEvent
 from app.models.api_key import ApiKey
+from app.models.telegram_conversation import TelegramConversation
 
 __all__ = [
     "Tenant", "User", "Document", "Subscription", "WebhookEvent",
     "Escalation", "ChatMessage", "Lead", "FunnelEvent", "ApiKey",
+    "TelegramConversation",
 ]
