@@ -5,7 +5,7 @@ Each bot maintains its own conversation history stored in the
 TelegramConversation table. When a user messages a bot:
   1. Load history for (bot_token, user_id) from DB
   2. Append user message
-  3. Call Groq with full history as context
+  3. Call Qwen with full history as context
   4. Append LLM response
   5. Save updated history
   6. Send LLM response back to user via Telegram sendMessage
@@ -22,7 +22,6 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import AsyncSessionLocal
 from app.models import TelegramConversation
-from app.config import get_settings
 from app.services.structured_logger import log_event
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
@@ -31,6 +30,10 @@ router = APIRouter(prefix="/telegram", tags=["telegram"])
 # ── Telegram API helpers ───────────────────────────────────────────────────────
 
 TELEGRAM_API = "https://api.telegram.org"
+
+# Qwen via Alibaba MaaS compatible-mode endpoint (OpenAI format)
+QWEN_BASE_URL = "https://ws-cr5ewhw1f1dm61i8.eu-central-1.maas.aliyuncs.com/compatible-mode/v1"
+QWEN_API_KEY = "sk-ws-djI.Z0t3UeKQo8ZHPwz1T6bgOrY7NhN4P5OPpbY-_rLtpqFWIwwORx9aqZNt4tYRCqKTergKeRWruAxLuXbJ41vpZnZ_Wkg1W8trRPUu9i1RK69o3lgfbNhATTukA1dDyoG0.MEYCIQCsUmWKhD2GzLm6pGKn6s3TNi-SvnVlkwG8ERe6dOlQagIhAM5Iptq9_8bS4KsKm12en5BiziGMp21iNcnXYM25uk1I"
 
 
 def _get_token_config(bot_token: str) -> dict:
@@ -117,12 +120,10 @@ async def _save_history(bot_token: str, user_id: str, history: list[dict]) -> No
 
 async def _call_llm(channel: str, history: list[dict]) -> str:
     """
-    Call Groq LLM with conversation history.
+    Call Qwen via Alibaba MaaS compatible-mode API with conversation history.
     Each channel has a system prompt that defines its agent personality.
-    Falls back to a simple echo if GROQ_API_KEY is not set.
+    Falls back to a simple echo if QWEN_API_KEY is not configured.
     """
-    settings = get_settings()
-
     # System prompts per agent channel
     system_prompts = {
         "GROWTH": (
@@ -158,35 +159,42 @@ async def _call_llm(channel: str, history: list[dict]) -> str:
         role = "user" if entry.get("from") == "user" else "assistant"
         messages.append({"role": role, "content": entry.get("text", "")})
 
-    if not settings.GROQ_API_KEY:
+    if not QWEN_API_KEY:
         # Fallback: echo with channel awareness
         last_msg = history[-1]["text"] if history else ""
         return f"[{channel}] Echo: {last_msg[:100]}"
 
-    headers = {
-        "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "qwen3.5-plus",
         "messages": messages,
         "temperature": 0.5,
         "max_tokens": 1024,
+        "thinking": {"type": "off"},
+    }
+
+    headers = {
+        "Authorization": f"Bearer {QWEN_API_KEY}",
+        "Content-Type": "application/json",
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(
-                "https://api.groq.com/openai/v1/chat/completions",
+                f"{QWEN_BASE_URL}/chat/completions",
                 json=payload,
                 headers=headers,
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            raw = data["choices"][0]["message"]["content"]
+            # Strip Qwen reasoning block if present (separated by "**Thinking Process:**" or "**<answer>**")
+            if "**Thinking Process:**" in raw:
+                raw = raw.split("**Thinking Process:**")[-1]
+                raw = raw.split("**</answer>**")[-1] if "**</answer>**" in raw else raw
+            return raw.strip()
     except Exception as e:
         log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
-        return f"Sorry, I encountered an error processing your request."
+        return "Sorry, I encountered an error processing your request."
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
