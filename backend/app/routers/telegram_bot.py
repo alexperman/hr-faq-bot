@@ -244,6 +244,15 @@ async def handle_webhook(token: str, request: Request):
     config = _get_token_config(token)
     channel = config["channel"]
 
+    # DEBUG command: echo back the chat_id so we can capture channel IDs
+    if text.strip() == "/debug":
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"{TELEGRAM_API}/bot{token}/sendMessage",
+                json={"chat_id": chat_id, "text": f"chat_id={chat_id} channel={channel}"},
+            )
+        return {"ok": True}
+
     # DEBUG: log chat_id to find channel ID
     print(f"DEBUG_INFRA_CHAT_ID: {chat_id} | channel: {channel} | text: {text[:50]}")
 
