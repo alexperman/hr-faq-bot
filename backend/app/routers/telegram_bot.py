@@ -205,6 +205,36 @@ async def test_webhook(request: Request):
     return {"ok": True, "message": "webhook working"}
 
 
+@router.post("/debug_webhook/{token}")
+async def debug_webhook(token: str, request: Request):
+    """
+    Debug endpoint — receives a message from a channel and logs
+    the raw message structure so we can extract the real channel chat_id.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return {"error": "invalid JSON"}
+
+    import json
+    msg = body.get("message", {})
+    chat = msg.get("chat", {})
+    forward = msg.get("forward_from_chat", {})
+
+    debug_info = {
+        "chat_id": chat.get("id"),
+        "chat_type": chat.get("type"),
+        "chat_title": chat.get("title"),
+        "forward_from_chat_id": forward.get("id"),
+        "forward_from_chat_title": forward.get("title"),
+        "full_chat": chat,
+        "raw_message": msg,
+    }
+
+    print(f"DEBUG_WEBHOOK: {json.dumps(debug_info, ensure_ascii=False)}")
+    return {"ok": True, "debug": debug_info}
+
+
 @router.post("/{token}/webhook")
 async def handle_webhook(token: str, request: Request):
     """
@@ -246,10 +276,17 @@ async def handle_webhook(token: str, request: Request):
 
     # DEBUG command: echo back the chat_id so we can capture channel IDs
     if text.strip() == "/debug":
+        # Use forward_from_chat.id if this is a forwarded message (from channel)
+        # Otherwise fall back to the current chat (direct message)
+        debug_chat_id = str(chat.get("id", ""))
+        debug_channel = channel
+        if message.get("forward_from_chat"):
+            debug_chat_id = str(message["forward_from_chat"]["id"])
+            debug_channel = f"FORWARDED from {message['forward_from_chat'].get('title', 'unknown')}"
         async with httpx.AsyncClient(timeout=10) as client:
             await client.post(
                 f"{TELEGRAM_API}/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": f"chat_id={chat_id} channel={channel}"},
+                json={"chat_id": chat_id, "text": f"chat_id={debug_chat_id} channel={debug_channel}"},
             )
         return {"ok": True}
 
