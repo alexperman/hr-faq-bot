@@ -244,6 +244,9 @@ async def handle_webhook(token: str, request: Request):
     config = _get_token_config(token)
     channel = config["channel"]
 
+    # DEBUG: log chat_id to find channel ID
+    print(f"DEBUG_INFRA_CHAT_ID: {chat_id} | channel: {channel} | text: {text[:50]}")
+
     # Load existing conversation history
     history = await _load_history(token, chat_id)
 
