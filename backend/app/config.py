@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # for a user (identified by email) so it can call the normal chat endpoint.
     BOT_API_KEY: str = ""
 
+    # Telegram bot token (for single-bot DM routing)
+    TELEGRAM_BOT_TOKEN: str = ""
+
     # PayPal
     PAYPAL_CLIENT_ID: str = ""
     PAYPAL_CLIENT_SECRET: str = ""

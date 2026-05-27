@@ -25,6 +25,8 @@ from sqlalchemy import select, func
 from app.database import AsyncSessionLocal
 from app.models import TelegramConversation
 from app.services.structured_logger import log_event
+from app.config import get_settings
+settings = get_settings()
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
@@ -36,9 +38,6 @@ QWEN_API_KEY = "sk-ws-djI.Z0t3UeKQo8ZHPwz1T6bgOrY7NhN4P5OPpbY-_rLtpqFWIwwORx9aqZ
 
 # Home — Alexander's personal DM
 HOME_CHAT_ID = "184895919"
-
-# Bot token for sending messages (same bot handles everything)
-BOT_TOKEN = "8849839799:AAFDistUV0WWX-c0mMXsM-SLkpO1WiNmIKg"
 
 
 # ── Agent routing ──────────────────────────────────────────────────────────────
@@ -164,7 +163,7 @@ async def _save_history(chat_id: str, history: list[dict]) -> None:
     """Save conversation history. One row per day-key per bot_token."""
     async with AsyncSessionLocal() as session:
         today = datetime.now(timezone.utc).date().isoformat()
-        bot_token = BOT_TOKEN  # single bot, use same token as key
+        bot_token = settings.TELEGRAM_BOT_TOKEN  # single bot, use same token as key
         history_json = json.dumps(history[-100:], ensure_ascii=False)  # keep last 100 msgs
 
         from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -196,7 +195,7 @@ async def _send(text: str, chat_id: str = HOME_CHAT_ID) -> None:
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             await client.post(
-                f"{TELEGRAM_API}/bot{BOT_TOKEN}/sendMessage",
+                f"{TELEGRAM_API}/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
                 json={"chat_id": chat_id, "text": escaped, "parse_mode": "MarkdownV2"},
             )
         except Exception as e:
