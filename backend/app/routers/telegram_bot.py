@@ -1,24 +1,26 @@
 """
-Telegram bot webhook router — one bot per agent channel.
+Telegram bot — single bot, multi-agent routing via @mention syntax.
 
-Each bot maintains its own conversation history stored in the
-TelegramConversation table. When a user messages a bot:
-  1. Load history for (bot_token, user_id) from DB
-  2. Append user message
-  3. Call Qwen with full history as context
-  4. Append LLM response
-  5. Save updated history
-  6. Send LLM response back to user via Telegram sendMessage
+Usage in DM with the bot:
+  @growth   message  → Growth agent
+  @infra    message  → Infra agent
+  @memory   message  → Memory agent
+  @product  message  → Product agent
+  @critical message  → Critical agent
 
-Route order matters — specific endpoints MUST be registered before
-parameterized ones (e.g. /telegram/test_webhook before /telegram/{token}).
+All responses return to the same DM.
+No channel setup needed — works entirely in DM.
+
+Daily digest: cron job at 06:00 Berlin (04:00 UTC) posts summary
+of previous day's activity to this chat.
 """
 import json
+import re
 import httpx
-from datetime import datetime, timezone
-from fastapi import APIRouter, Request, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from datetime import datetime, timezone, timedelta
+from collections import defaultdict
+from fastapi import APIRouter, Request, HTTPException
+from sqlalchemy import select, func
 
 from app.database import AsyncSessionLocal
 from app.models import TelegramConversation
@@ -26,84 +28,149 @@ from app.services.structured_logger import log_event
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
-
-# ── Telegram API helpers ───────────────────────────────────────────────────────
-
 TELEGRAM_API = "https://api.telegram.org"
 
-# Qwen via Alibaba MaaS compatible-mode endpoint (OpenAI format)
+# Qwen via Alibaba MaaS compatible-mode endpoint
 QWEN_BASE_URL = "https://ws-cr5ewhw1f1dm61i8.eu-central-1.maas.aliyuncs.com/compatible-mode/v1"
 QWEN_API_KEY = "sk-ws-djI.Z0t3UeKQo8ZHPwz1T6bgOrY7NhN4P5OPpbY-_rLtpqFWIwwORx9aqZNt4tYRCqKTergKeRWruAxLuXbJ41vpZnZ_Wkg1W8trRPUu9i1RK69o3lgfbNhATTukA1dDyoG0.MEYCIQCsUmWKhD2GzLm6pGKn6s3TNi-SvnVlkwG8ERe6dOlQagIhAM5Iptq9_8bS4KsKm12en5BiziGMp21iNcnXYM25uk1I"
 
+# Home — Alexander's personal DM
+HOME_CHAT_ID = "184895919"
 
-def _get_token_config(bot_token: str) -> dict:
-    """
-    Map bot_token → (channel_name, chat_id) for routing.
-    Each bot token is assigned to exactly one agent channel.
-    Falls back to GROWTH for unknown tokens.
-    """
-    # Token → channel mapping (loaded from env)
-    token_map = {
-        "8849839799:AAFmWgR7AZgHDWdT7m7M-GOvAf-eyZwTYGI": "GROWTH",
-        "8526153645:AAFB6Z1cUq9R-Y5hU6n-r2q7T9-k2b9XQkM": "INFRA",
-        "8896327975:AAHgR4lD0aT8S2Y1vN6qX3wZ7-b4c8KjLmN": "MEMORY",
-        "8926108968:AAJb5kM2cP7Q9S4Z3tW6xY8aF-d5e9LhOoP": "PRODUCT",
-        "8732149825:AACl3nL6dR8T6U2X4sW9yB7cG-e6f0MiQpV": "CRITICAL",
+# Bot token for sending messages (same bot handles everything)
+BOT_TOKEN = "8849839799:AAFDistUV0WWX-c0mMXsM-SLkpO1WiNmIKg"
+
+
+# ── Agent routing ──────────────────────────────────────────────────────────────
+
+AGENT_MAP = {
+    "growth":   "GROWTH",
+    "infra":    "INFRA",
+    "memory":   "MEMORY",
+    "product":  "PRODUCT",
+    "critical": "CRITICAL",
+}
+
+
+# ── System prompts per agent ───────────────────────────────────────────────────
+
+SYSTEM_PROMPTS = {
+    "GROWTH": (
+        "You are the Growth Agent. You help with outreach, lead generation, "
+        "marketing automation, and growth strategy. Be direct, action-oriented. "
+        "Use concise responses. No filler."
+    ),
+    "INFRA": (
+        "You are the Infra Agent. You help with deployment, DevOps, "
+        "infrastructure monitoring, and technical operations. Be precise and technical. "
+        "Suggest concrete commands and steps."
+    ),
+    "MEMORY": (
+        "You are the Memory Agent. You help with organizational memory, "
+        "knowledge management, decision logging, and project context. "
+        "Be thorough and structured."
+    ),
+    "PRODUCT": (
+        "You are the Product Agent. You help with product planning, feature ideas, "
+        "roadmap design, and user feedback analysis. Be creative and strategic."
+    ),
+    "CRITICAL": (
+        "You are the Critical Agent. You handle urgent issues, incidents, "
+        "escalations, and critical decisions. Be calm, clear, and decisive. "
+        "Prioritize speed and accuracy."
+    ),
+}
+
+
+# ── LLM ─────────────────────────────────────────────────────────────────────────
+
+def _strip_thinking(raw: str) -> str:
+    """Strip Qwen reasoning/thinking blocks from response."""
+    if "**Thinking Process:**" in raw:
+        raw = raw.split("**Thinking Process:**")[-1]
+    if "**</answer>**" in raw:
+        raw = raw.split("**</answer>**")[-1]
+    return raw.strip()
+
+
+async def _call_llm(channel: str, messages: list[dict]) -> str:
+    """Call Qwen via Alibaba MaaS compatible-mode API."""
+    system = SYSTEM_PROMPTS.get(channel, SYSTEM_PROMPTS["GROWTH"])
+
+    # Build full message list: system + history
+    full_messages = [{"role": "system", "content": system}]
+    for msg in messages:
+        role = "user" if msg.get("from") == "user" else "assistant"
+        full_messages.append({"role": role, "content": msg.get("text", "")})
+
+    if not QWEN_API_KEY:
+        last = messages[-1]["text"] if messages else ""
+        return f"[{channel}] Echo: {last[:100]}"
+
+    payload = {
+        "model": "qwen3.5-plus",
+        "messages": full_messages,
+        "temperature": 0.5,
+        "max_tokens": 1024,
+        "thinking": {"type": "off"},
     }
-    channel = token_map.get(bot_token, "GROWTH")
 
-    # Per-channel chat IDs (all pointing to Alex's personal Telegram)
-    chat_ids = {
-        "GROWTH":  "184895919",
-        "INFRA":   "184895919",
-        "MEMORY":  "184895919",
-        "PRODUCT": "184895919",
-        "CRITICAL":"184895919",
-    }
-    return {
-        "channel": channel,
-        "chat_id": chat_ids.get(channel, "184895919"),
-    }
-
-
-async def _send_telegram_message(bot_token: str, chat_id: str, text: str) -> dict:
-    """Send a message via Telegram Bot API."""
-    url = f"{TELEGRAM_API}/bot{bot_token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        return resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{QWEN_BASE_URL}/chat/completions",
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {QWEN_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            raw = data["choices"][0]["message"]["content"]
+            return _strip_thinking(raw)
+    except Exception as e:
+        log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
+        return "Sorry, I encountered an error. Please try again."
 
 
-# ── Conversation history helpers ────────────────────────────────────────────────
+# ── History ────────────────────────────────────────────────────────────────────
 
-async def _load_history(bot_token: str, user_id: str) -> list[dict]:
-    """Load message history for this bot + user from DB."""
+async def _load_history(chat_id: str) -> list[dict]:
+    """Load all messages for a given chat_id (stored per day-key)."""
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(TelegramConversation).where(
-                TelegramConversation.bot_token == bot_token,
-                TelegramConversation.user_id == user_id,
-            )
+                TelegramConversation.user_id == chat_id,
+            ).order_by(TelegramConversation.updated_at.desc()).limit(50)
         )
-        row = result.scalar_one_or_none()
-        if row is None:
-            return []
-        try:
-            return json.loads(row.history_json)
-        except json.JSONDecodeError:
-            return []
+        rows = result.scalars().all()
+        # Reverse so oldest first
+        messages = []
+        seen_keys = set()
+        for row in reversed(rows):
+            key = f"{row.bot_token}:{row.user_id}:{row.updated_at.date().isoformat()}"
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            try:
+                messages.extend(json.loads(row.history_json))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return messages
 
 
-async def _save_history(bot_token: str, user_id: str, history: list[dict]) -> None:
-    """Save message history for this bot + user to DB (upsert)."""
-    history_json = json.dumps(history, ensure_ascii=False)
+async def _save_history(chat_id: str, history: list[dict]) -> None:
+    """Save conversation history. One row per day-key per bot_token."""
     async with AsyncSessionLocal() as session:
-        # Upsert using PostgreSQL ON CONFLICT
+        today = datetime.now(timezone.utc).date().isoformat()
+        bot_token = BOT_TOKEN  # single bot, use same token as key
+        history_json = json.dumps(history[-100:], ensure_ascii=False)  # keep last 100 msgs
+
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
         stmt = pg_insert(TelegramConversation).values(
             bot_token=bot_token,
-            user_id=user_id,
+            user_id=chat_id,
             history_json=history_json,
             updated_at=datetime.now(timezone.utc),
         )
@@ -118,229 +185,213 @@ async def _save_history(bot_token: str, user_id: str, history: list[dict]) -> No
         await session.commit()
 
 
-async def _call_llm(channel: str, history: list[dict]) -> str:
-    """
-    Call Qwen via Alibaba MaaS compatible-mode API with conversation history.
-    Each channel has a system prompt that defines its agent personality.
-    Falls back to a simple echo if QWEN_API_KEY is not configured.
-    """
-    # System prompts per agent channel
-    system_prompts = {
-        "GROWTH": (
-            "You are the Growth Agent. You help with outreach, lead generation, "
-            "marketing automation, and growth strategy. Be direct, action-oriented. "
-            "Use concise responses. No filler."
-        ),
-        "INFRA": (
-            "You are the Infra Agent. You help with deployment, DevOps, "
-            "infrastructure monitoring, and technical operations. Be precise and technical. "
-            "Suggest concrete commands and steps."
-        ),
-        "MEMORY": (
-            "You are the Memory Agent. You help with organizational memory, "
-            "knowledge management, decision logging, and project context. "
-            "Be thorough and structured."
-        ),
-        "PRODUCT": (
-            "You are the Product Agent. You help with product planning, feature ideas, "
-            "roadmap design, and user feedback analysis. Be creative and strategic."
-        ),
-        "CRITICAL": (
-            "You are the Critical Agent. You handle urgent issues, incidents, "
-            "escalations, and critical decisions. Be calm, clear, and decisive. "
-            "Prioritize speed and accuracy."
-        ),
-    }
-    system = system_prompts.get(channel, system_prompts["GROWTH"])
+# ── Telegram sending ───────────────────────────────────────────────────────────
 
-    # Build messages list from history
-    messages = [{"role": "system", "content": system}]
-    for entry in history:
-        role = "user" if entry.get("from") == "user" else "assistant"
-        messages.append({"role": role, "content": entry.get("text", "")})
+async def _send(text: str, chat_id: str = HOME_CHAT_ID) -> None:
+    """Send a message to Telegram."""
+    # Escape Telegram MarkdownV2 special chars
+    escape_chars = re.compile(r"([_*\[\]\(\)~`>#\+\-\=|{}\.!\\])")
+    escaped = escape_chars.sub(r"\\\1", text)
 
-    if not QWEN_API_KEY:
-        # Fallback: echo with channel awareness
-        last_msg = history[-1]["text"] if history else ""
-        return f"[{channel}] Echo: {last_msg[:100]}"
-
-    payload = {
-        "model": "qwen3.5-plus",
-        "messages": messages,
-        "temperature": 0.5,
-        "max_tokens": 1024,
-        "thinking": {"type": "off"},
-    }
-
-    headers = {
-        "Authorization": f"Bearer {QWEN_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                f"{QWEN_BASE_URL}/chat/completions",
-                json=payload,
-                headers=headers,
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            await client.post(
+                f"{TELEGRAM_API}/bot{BOT_TOKEN}/sendMessage",
+                json={"chat_id": chat_id, "text": escaped, "parse_mode": "MarkdownV2"},
             )
-            resp.raise_for_status()
-            data = resp.json()
-            raw = data["choices"][0]["message"]["content"]
-            # Strip Qwen reasoning block if present (separated by "**Thinking Process:**" or "**<answer>**")
-            if "**Thinking Process:**" in raw:
-                raw = raw.split("**Thinking Process:**")[-1]
-                raw = raw.split("**</answer>**")[-1] if "**</answer>**" in raw else raw
-            return raw.strip()
-    except Exception as e:
-        log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
-        return "Sorry, I encountered an error processing your request."
+        except Exception as e:
+            log_event(event="telegram_send_failed", severity="medium", chat_id=chat_id, error=str(e))
+
+
+# ── Routing ────────────────────────────────────────────────────────────────────
+
+async def _route_message(text: str) -> str:
+    """
+    Parse @agent prefix and route to the correct agent.
+    Returns the LLM response text.
+    """
+    # Match @agent at the start of the message
+    match = re.match(r"^@(\w+)\s+(.+)$", text.strip(), re.DOTALL)
+    if not match:
+        # No prefix → default to GROWTH
+        agent_key = "growth"
+        content = text.strip()
+    else:
+        agent_key = match.group(1).lower()
+        content = match.group(2).strip()
+
+    if agent_key not in AGENT_MAP:
+        available = ", ".join(AGENT_MAP.keys())
+        return f"Unknown agent: `{agent_key}`\. Available agents: {available}"
+
+    channel = AGENT_MAP[agent_key]
+
+    # Load history for this chat
+    history = await _load_history(HOME_CHAT_ID)
+
+    # Add current message
+    history.append({
+        "from": "user",
+        "text": content,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+    # Call LLM
+    response = await _call_llm(channel, history)
+
+    # Save updated history
+    history.append({
+        "from": "assistant",
+        "text": response,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+    await _save_history(HOME_CHAT_ID, history)
+
+    return response
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @router.post("/test_webhook")
-async def test_webhook(request: Request):
-    """Test endpoint to verify webhook connectivity."""
-    return {"ok": True, "message": "webhook working"}
-
-
-@router.post("/debug_webhook/{token}")
-async def debug_webhook(token: str, request: Request):
-    """
-    Debug endpoint — receives a message from a channel and logs
-    the raw message structure so we can extract the real channel chat_id.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        return {"error": "invalid JSON"}
-
-    import json
-    msg = body.get("message", {})
-    chat = msg.get("chat", {})
-    forward = msg.get("forward_from_chat", {})
-
-    debug_info = {
-        "chat_id": chat.get("id"),
-        "chat_type": chat.get("type"),
-        "chat_title": chat.get("title"),
-        "forward_from_chat_id": forward.get("id"),
-        "forward_from_chat_title": forward.get("title"),
-        "full_chat": chat,
-        "raw_message": msg,
-    }
-
-    print(f"DEBUG_WEBHOOK: {json.dumps(debug_info, ensure_ascii=False)}")
-    return {"ok": True, "debug": debug_info}
+async def test_webhook():
+    return {"ok": True, "message": "single\-bot router ready"}
 
 
 @router.post("/{token}/webhook")
 async def handle_webhook(token: str, request: Request):
     """
-    Main webhook handler — Telegram sends update here when user messages the bot.
-    Path order matters: /test_webhook must come before /{token}/webhook to avoid
-    'test_webhook' being interpreted as a bot token.
+    Main webhook handler — all routing happens in DM with @mention syntax.
+    No channel setup needed.
     """
     try:
         body = await request.json()
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
-    # Extract update fields
-    update_id = body.get("update_id", "")
     message = body.get("message", {})
     callback_query = body.get("callback_query", {})
 
-    # Handle callback queries (inline button clicks)
-    data = ""
     if callback_query:
         message = callback_query.get("message", {})
-        data = callback_query.get("data", "")
 
     chat = message.get("chat", {})
     user = message.get("from", {})
     text = message.get("text", "")
 
-    # Ignore non-text messages silently
-    if not text and not callback_query:
+    # Only handle text messages in private DM (chat_type = "private")
+    if not text:
+        return {"ok": True}
+
+    chat_type = chat.get("type", "")
+    if chat_type != "private":
+        # Ignore group/channel messages — we're only handling DMs
         return {"ok": True}
 
     chat_id = str(chat.get("id", ""))
     first_name = user.get("first_name", "there")
-    message_id = message.get("message_id")
 
-    # Get routing config for this bot
-    config = _get_token_config(token)
-    channel = config["channel"]
+    # Route via @agent prefix
+    response = await _route_message(text)
 
-    # DEBUG command: echo back the chat_id so we can capture channel IDs
-    if text.strip() == "/debug":
-        # Use forward_from_chat.id if this is a forwarded message (from channel)
-        # Otherwise fall back to the current chat (direct message)
-        debug_chat_id = str(chat.get("id", ""))
-        debug_channel = channel
-        if message.get("forward_from_chat"):
-            debug_chat_id = str(message["forward_from_chat"]["id"])
-            debug_channel = f"FORWARDED from {message['forward_from_chat'].get('title', 'unknown')}"
-        async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(
-                f"{TELEGRAM_API}/bot{token}/sendMessage",
-                json={"chat_id": chat_id, "text": f"chat_id={debug_chat_id} channel={debug_channel}"},
-            )
-        return {"ok": True}
+    # Send response back to the DM
+    if response:
+        await _send(response, chat_id)
 
-    # DEBUG: log chat_id to find channel ID
-    print(f"DEBUG_INFRA_CHAT_ID: {chat_id} | channel: {channel} | text: {text[:50]}")
-
-    # Load existing conversation history
-    history = await _load_history(token, chat_id)
-
-    # Append user message to history
-    user_msg = {
-        "from": "user",
-        "text": text or f"[callback: {data}]",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    history.append(user_msg)
-
-    # Call LLM with full context
-    response_text = await _call_llm(channel, history)
-
-    # Append assistant response to history
-    history.append({
-        "from": "assistant",
-        "text": response_text,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    })
-
-    # Persist updated history
-    await _save_history(token, chat_id, history)
-
-    # Send response back to Telegram user
-    if response_text:
-        # Escape Telegram special characters in Markdown
-        escape_chars = ["_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]
-        escaped_text = response_text
-        for ch in escape_chars:
-            escaped_text = escaped_text.replace(ch, f"\\{ch}")
-
-        try:
-            await _send_telegram_message(token, chat_id, escaped_text)
-        except Exception as e:
-            log_event(
-                event="telegram_send_failed",
-                severity="high",
-                token_prefix=token[:10],
-                chat_id=chat_id,
-                error=str(e),
-            )
-
-    log_event(
-        event="telegram_webhook_processed",
-        channel=channel,
-        chat_id=chat_id,
-        history_len=len(history),
-    )
-
+    log_event(event="webhook_processed", chat_id=chat_id, text=text[:50])
     return {"ok": True}
+
+
+# ── Daily digest (for cron job) ────────────────────────────────────────────────
+
+async def _build_digest() -> str:
+    """
+    Build a concise daily digest from the previous day's conversation history.
+    Runs at 06:00 Berlin (04:00 UTC).
+    """
+    async with AsyncSessionLocal() as session:
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date()
+        start = datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0, tzinfo=timezone.utc)
+        end   = datetime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, tzinfo=timezone.utc)
+
+        result = await session.execute(
+            select(TelegramConversation).where(
+                TelegramConversation.user_id == HOME_CHAT_ID,
+                TelegramConversation.updated_at >= start,
+                TelegramConversation.updated_at <= end,
+            )
+        )
+        rows = result.scalars().all()
+
+    if not rows:
+        return f"📋 *Daily Digest — {yesterday.isoformat()}*\n\nNo activity yesterday."
+
+    # Collect all messages
+    all_messages = []
+    for row in rows:
+        try:
+            all_messages.extend(json.loads(row.history_json))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Group by agent channel (look for @growth, @infra etc in user messages)
+    agent_counts = defaultdict(int)
+    total_user = 0
+    for msg in all_messages:
+        if msg.get("from") == "user":
+            total_user += 1
+            text = msg.get("text", "")
+            for agent in AGENT_MAP:
+                if f"@{agent}" in text.lower():
+                    agent_counts[agent] += 1
+                    break
+        else:
+            pass  # count total messages by agent later via history
+
+    # Build digest lines
+    lines = [
+        f"📋 *Daily Digest — {yesterday.isoformat()}*",
+        f"",
+        f"Total interactions: {total_user}",
+        f""
+    ]
+
+    # Per-agent summary
+    if agent_counts:
+        lines.append("*By Agent:*")
+        for agent, count in sorted(agent_counts.items(), key=lambda x: -x[1]):
+            channel = AGENT_MAP[agent]
+            lines.append(f"  • {channel}: {count} message\(s\)")
+        lines.append("")
+
+    # Action items: look for numbered lists or TODO-like content in assistant responses
+    lines.append("*Action Items:*")
+    action_count = 0
+    for msg in all_messages:
+        if msg.get("from") == "assistant":
+            text = msg.get("text", "")
+            # Look for numbered items, TODO items, or lines starting with -
+            for line in text.split("\n"):
+                stripped = line.strip()
+                if any(stripped.startswith(marker) for marker in ["1.", "2.", "3.", "- [ ]", "TODO", "[ ]", "Action:"]):
+                    lines.append(f"  • {stripped[:100]}")
+                    action_count += 1
+                    if action_count >= 10:
+                        break
+        if action_count >= 10:
+            break
+
+    if action_count == 0:
+        lines.append("  • No explicit action items found — check agent responses above")
+
+    lines.append("")
+    lines.append("_Generated automatically by Hermes_")
+
+    return "\n".join(lines)
+
+
+@router.get("/digest")
+async def get_digest():
+    """Manual trigger for daily digest — also callable by cron job."""
+    digest = await _build_digest()
+    await _send(digest)
+    return {"ok": True, "digest": digest}
