@@ -7,8 +7,10 @@ Usage in DM with the bot:
   @memory   message  → Memory agent
   @product  message  → Product agent
   @critical message  → Critical agent
+  @dev      message  → Developer agent (delegates to SquadManager per project)
 
 All responses return to the same DM.
+Known projects: AlterZahenApp, hr-faq-bot, bloneybears.
 No channel setup needed — works entirely in DM.
 
 Daily digest: cron job at 06:00 Berlin (04:00 UTC) posts summary
@@ -21,6 +23,10 @@ from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 from fastapi import APIRouter, Request, HTTPException
 from sqlalchemy import select, func
+
+import sys
+sys.path.insert(0, "/root/.hermes/agents")
+from _shared.squad import SquadManager
 
 from app.database import AsyncSessionLocal
 from app.models import TelegramConversation
@@ -48,6 +54,7 @@ AGENT_MAP = {
     "memory":   "MEMORY",
     "product":  "PRODUCT",
     "critical": "CRITICAL",
+    "dev":      "DEVELOPER",
 }
 
 
@@ -77,6 +84,12 @@ SYSTEM_PROMPTS = {
         "You are the Critical Agent. You handle urgent issues, incidents, "
         "escalations, and critical decisions. Be calm, clear, and decisive. "
         "Prioritize speed and accuracy."
+    ),
+    "DEVELOPER": (
+        "You are the Developer Agent. You delegate coding tasks to project-specific "
+        "Squad agents via SquadManager.run(task, project). "
+        "Detect project from message text. Known projects: AlterZahenApp, hr-faq-bot, bloneybears. "
+        "Be precise — wrong project means wrong codebase context."
     ),
 }
 
@@ -222,6 +235,17 @@ async def _route_message(text: str) -> str:
     if agent_key not in AGENT_MAP:
         available = ", ".join(AGENT_MAP.keys())
         return f"Unknown agent: `{agent_key}`\. Available agents: {available}"
+
+    # DEVELOPER: delegate to SquadManager (persistent per-project qwen serve)
+    if agent_key == "dev":
+        sq_mgr = SquadManager()
+        result = sq_mgr.run(content)
+        history.append({"from": "user", "text": content,
+                        "timestamp": datetime.now(timezone.utc).isoformat()})
+        history.append({"from": "assistant", "text": result,
+                        "timestamp": datetime.now(timezone.utc).isoformat()})
+        await _save_history(HOME_CHAT_ID, history)
+        return result
 
     channel = AGENT_MAP[agent_key]
 
