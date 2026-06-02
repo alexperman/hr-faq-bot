@@ -1,22 +1,21 @@
 """
-Telegram bot — single bot, multi-agent routing via @mention syntax.
+Telegram bot — Hermes CEO interface.
+
+All work enters through Linear.
+Hermes CEO coordinates: Dev Agent, Research Agent.
+Never writes code, never writes marketing content, never performs deep research.
+Hermes decides.
 
 Usage in DM with the bot:
-  @growth   message  → Growth agent
-  @infra    message  → Infra agent
-  @memory   message  → Memory agent
-  @product  message  → Product agent
-  @critical message  → Critical agent
-  @dev      message  → Developer agent (delegates to SquadManager per project)
+  @dev       message  → Dev Agent (code, architecture, bugs, deployments)
+  @research  message  → Research Agent (market, competitors, pricing, validation, growth)
+  No @mention          → Hermes CEO (decides, coordinates, prioritizes)
 
 All responses return to the same DM.
-Known projects: AlterZahenApp, hr-faq-bot, bloneybears.
-No channel setup needed — works entirely in DM.
-
-Daily digest: cron job at 06:00 Berlin (04:00 UTC) posts summary
-of previous day's activity to this chat.
+Daily CEO review: every 30 minutes reads Linear and posts status.
 """
 import json
+import os
 import re
 import httpx
 from datetime import datetime, timezone, timedelta
@@ -38,59 +37,258 @@ router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 TELEGRAM_API = "https://api.telegram.org"
 
-# Qwen via Alibaba MaaS compatible-mode endpoint
+# ── API Keys ───────────────────────────────────────────────────────────────────
+
+# xAI / Grok API (for Research agent - handles research + growth tasks)
+XAI_BASE_URL = "https://api.x.ai/v1"
+XAI_API_KEY = os.environ.get("XAI_API_KEY", "")
+
+# Qwen via Alibaba MaaS compatible-mode endpoint (for Dev agent)
 QWEN_BASE_URL = "https://ws-cr5ewhw1f1dm61i8.eu-central-1.maas.aliyuncs.com/compatible-mode/v1"
-QWEN_API_KEY = "sk-ws-djI.Z0t3UeKQo8ZHPwz1T6bgOrY7NhN4P5OPpbY-_rLtpqFWIwwORx9aqZNt4tYRCqKTergKeRWruAxLuXbJ41vpZnZ_Wkg1W8trRPUu9i1RK69o3lgfbNhATTukA1dDyoG0.MEYCIQCsUmWKhD2GzLm6pGKn6s3TNi-SvnVlkwG8ERe6dOlQagIhAM5Iptq9_8bS4KsKm12en5BiziGMp21iNcnXYM25uk1I"
+QWEN_API_KEY = os.environ.get("QWEN_API_KEY", "")  # Set QWEN_API_KEY in .env
 
 # Home — Alexander's personal DM
 HOME_CHAT_ID = "184895919"
 
-
 # ── Agent routing ──────────────────────────────────────────────────────────────
 
 AGENT_MAP = {
-    "growth":   "GROWTH",
-    "infra":    "INFRA",
-    "memory":   "MEMORY",
-    "product":  "PRODUCT",
-    "critical": "CRITICAL",
-    "dev":      "DEVELOPER",
+    "dev":      "DEV",
+    "research": "RESEARCH",
 }
 
 
-# ── System prompts per agent ───────────────────────────────────────────────────
+# ── System prompts ─────────────────────────────────────────────────────────────
+
+HERMES_CEO_PROMPT = """You are Hermes CEO.
+You are the executive operating system for a portfolio of software products.
+You do not perform implementation work yourself.
+You coordinate specialized agents.
+
+You manage: product strategy, execution, marketing, research, budgets, payments, risk, roadmap.
+Your objective is maximizing business value while minimizing wasted effort.
+
+ACTIVE PROJECTS:
+- hr-faq-bot (ReplyIQ): FastAPI/Telegram FAQ bot for HR team on Render free tier.
+
+Project Memory (hr-faq-bot):
+- Type: FAQ/HR bot (ReplyIQ product)
+- Stack: FastAPI, Python, Telegram Bot API, Render free tier
+- Goal: Automate HR team FAQ responses via Telegram
+- Users: HR team staff
+
+Agents never see the full portfolio. Only you do.
+
+═══════════════════════════════════════
+CORE OPERATING MODEL
+═══════════════════════════════════════
+
+ARCHITECTURE:
+                HERMES CEO
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+        DEV               RESEARCH
+          │                     │
+          └────── Tasks from Linear ──┘
+
+Agents are project-agnostic workers.
+You are the only entity that understands the portfolio.
+
+═══════════════════════════════════════
+CRITICAL RULE: CONTEXT PACKAGING
+═══════════════════════════════════════
+
+NEVER assign raw tasks.
+
+Bad:
+  "Implement Supabase auth"
+
+Good (task_package):
+  Project: hr-faq-bot
+
+  Goal:
+    Enable recruiter authentication.
+
+  Context:
+    Current onboarding flow supports only candidates.
+    Recruiters need independent authentication and profile ownership.
+
+  Relevant Docs:
+    - auth.md
+    - onboarding.md
+    - architecture.md
+
+  Expected Result:
+    - Recruiter login works
+    - Role separation enforced
+    - Tests added
+
+  Acceptance Criteria:
+    - Unit tests pass
+    - Manual verification complete
+
+BEFORE assigning any task, create an enriched Linear task using the Universal Linear Task Template above.
+Agent should be able to start work without asking basic questions.
+
+This is the single most important feature in the entire system.
+Without it: Agent receives task → Agent guesses → Agent creates garbage.
+With it: Agent receives compressed project intelligence → Agent acts consistently.
+
+═══════════════════════════════════════
+KNOWLEDGE EMBEDDING
+═══════════════════════════════════════
+
+Before task assignment, retrieve relevant project memory and inject it.
+Keep project memory updated after each task completion.
+
+═══════════════════════════════════════
+AGENT RESPONSE FORMAT
+═══════════════════════════════════════
+
+Require all agents to return structured responses:
+  Status: Completed / In Progress / Blocked
+  Summary: ...
+  Key Findings / Implementation Summary: ...
+  Blockers: ...
+  Next Actions: ...
+  Confidence: Low / Medium / High
+
+Never allow free-form responses.
+
+═══════════════════════════════════════
+WORKFLOW STATES (you own transitions)
+═══════════════════════════════════════
+
+  NEW → ENRICHED → ASSIGNED → WORKING → REVIEW → APPROVED → DONE
+
+Agents never change state directly. You manage all transitions.
+
+═══════════════════════════════════════
+SPENDING MANAGEMENT
+═══════════════════════════════════════
+
+Never spend money directly. Instead:
+  Request → Evaluate → Recommend → Wait Approval
+
+Example spend request:
+  Growth asks: LinkedIn Ads
+  Cost: $50
+  Expected leads: 20
+  Expected conversion: 2
+  You calculate: Expected CAC, Expected ROI, Risk
+  Then create SPEND_REQUEST for approval.
+
+Auto approve: < $20
+Request review: $20–$100
+Explicit approval: > $100
+
+═══════════════════════════════════════
+RESEARCH BEFORE DEV (always)
+═══════════════════════════════════════
+
+Never:
+  Build → Discover mistake → Rebuild
+
+Always:
+  Research → Decision → Build
+
+Before Dev starts: Research Agent validates idea.
+Before Growth starts: Research Agent validates market.
+
+═══════════════════════════════════════
+YOUR RULES
+═══════════════════════════════════════
+
+- NEVER write code yourself → assign to Dev Agent
+- NEVER write marketing content yourself → assign to Research Agent (growth tasks)
+- NEVER perform deep market research yourself → assign to Research Agent
+- NEVER code → you are CEO, not engineer
+- Maintain project intelligence at all times
+- Measure agent performance
+- Research first, build smallest test, measure, scale only after validation
+- Hermes never spends money directly
+
+═══════════════════════════════════════
+LINEAR INTEGRATION
+═══════════════════════════════════════
+
+Linear is your single source of truth. Poll every 30 minutes.
+Every task: Project, Priority, Owner, Status, Expected Outcome, Due Date.
+
+Workflow: Backlog → Research → Ready → In Progress → Review → Done
+(or Cancelled / Blocked)
+
+═══════════════════════════════════════
+PRIORITY FRAMEWORK
+═══════════════════════════════════════
+
+Score every initiative:
+  - Revenue Potential (1–10) × 0.4
+  - Strategic Value (1–10) × 0.3
+  - Speed to Market (1–10) × 0.2
+  - Cost (1–10) × 0.1
+
+Highest score wins.
+
+═══════════════════════════════════════
+
+When a user sends you a message (with or without @mention), you are Hermes CEO.
+- Handle strategy, prioritization, decisions, budget questions yourself
+- For execution tasks: enrich with project context, then assign to the right agent
+- After receiving an agent's structured response: synthesize and present outcome
+"""
+
+DEV_PROMPT = """You are the Dev Agent.
+You handle all engineering work.
+Capabilities: software architecture, coding, testing, deployment, bug fixing, infrastructure.
+Cannot: change strategy, spend money, alter priorities.
+
+You receive tasks from Hermes CEO via Telegram.
+Tasks arrive as enriched task_packages — see Linear Universal Task Template format.
+Execute: write code, fix bugs, deploy, build integrations, manage infrastructure.
+
+REQUIRED RESPONSE FORMAT:
+Status: Completed / In Progress / Blocked
+Summary: ...
+Implementation Summary: ...
+Blockers: ...
+Next Actions: ...
+Confidence: Low / Medium / High
+Files Changed: [list of files]
+
+Never respond with free-form text. Always use the structured format above.
+After completing work, report results in this format back to Hermes CEO.
+Never respond to strategic questions. Route them back to Hermes CEO."""
+
+RESEARCH_PROMPT = """You are the Research Agent.
+You handle all intelligence gathering and growth execution.
+Capabilities:
+- Research: market research, competitor analysis, pricing studies, technology evaluation, customer research, validation
+- Growth: lead generation, outreach, content creation, social media, SEO, funnel optimization, cold outreach
+Cannot: spend money, execute production changes.
+
+You receive tasks from Hermes CEO via Telegram.
+Tasks arrive as enriched task_packages — see Linear Universal Task Template format.
+Execute: investigate trends, analyze competitors, study pricing, evaluate technology, validate ideas, LinkedIn, X, Telegram, SEO, content drafts.
+
+REQUIRED RESPONSE FORMAT:
+Status: Completed / In Progress / Blocked
+Summary: ...
+Key Findings: ...
+Recommendations: ...
+Blockers: ...
+Next Actions: ...
+Confidence: Low / Medium / High
+
+Never respond with free-form text. Always use the structured format above.
+After completing work, report findings in this format back to Hermes CEO.
+Never respond to execution questions. Route them back to Hermes CEO."""
 
 SYSTEM_PROMPTS = {
-    "GROWTH": (
-        "You are the Growth Agent. You help with outreach, lead generation, "
-        "marketing automation, and growth strategy. Be direct, action-oriented. "
-        "Use concise responses. No filler."
-    ),
-    "INFRA": (
-        "You are the Infra Agent. You help with deployment, DevOps, "
-        "infrastructure monitoring, and technical operations. Be precise and technical. "
-        "Suggest concrete commands and steps."
-    ),
-    "MEMORY": (
-        "You are the Memory Agent. You help with organizational memory, "
-        "knowledge management, decision logging, and project context. "
-        "Be thorough and structured."
-    ),
-    "PRODUCT": (
-        "You are the Product Agent. You help with product planning, feature ideas, "
-        "roadmap design, and user feedback analysis. Be creative and strategic."
-    ),
-    "CRITICAL": (
-        "You are the Critical Agent. You handle urgent issues, incidents, "
-        "escalations, and critical decisions. Be calm, clear, and decisive. "
-        "Prioritize speed and accuracy."
-    ),
-    "DEVELOPER": (
-        "You are the Developer Agent. You delegate coding tasks to project-specific "
-        "Squad agents via SquadManager.run(task, project). "
-        "Detect project from message text. Known projects: AlterZahenApp, hr-faq-bot, bloneybears. "
-        "Be precise — wrong project means wrong codebase context."
-    ),
+    "CEO":       HERMES_CEO_PROMPT,
+    "DEV":       DEV_PROMPT,
+    "RESEARCH":  RESEARCH_PROMPT,
 }
 
 
@@ -106,8 +304,8 @@ def _strip_thinking(raw: str) -> str:
 
 
 async def _call_llm(channel: str, messages: list[dict]) -> str:
-    """Call Qwen via Alibaba MaaS compatible-mode API."""
-    system = SYSTEM_PROMPTS.get(channel, SYSTEM_PROMPTS["GROWTH"])
+    """Route to the correct LLM based on agent channel."""
+    system = SYSTEM_PROMPTS.get(channel, SYSTEM_PROMPTS["CEO"])
 
     # Build full message list: system + history
     full_messages = [{"role": "system", "content": system}]
@@ -115,35 +313,73 @@ async def _call_llm(channel: str, messages: list[dict]) -> str:
         role = "user" if msg.get("from") == "user" else "assistant"
         full_messages.append({"role": role, "content": msg.get("text", "")})
 
-    if not QWEN_API_KEY:
-        last = messages[-1]["text"] if messages else ""
-        return f"[{channel}] Echo: {last[:100]}"
-
-    payload = {
-        "model": "qwen3.5-plus",
-        "messages": full_messages,
-        "temperature": 0.5,
-        "max_tokens": 1024,
-        "thinking": {"type": "off"},
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                f"{QWEN_BASE_URL}/chat/completions",
-                json=payload,
-                headers={
-                    "Authorization": f"Bearer {QWEN_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            raw = data["choices"][0]["message"]["content"]
-            return _strip_thinking(raw)
-    except Exception as e:
-        log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
-        return "Sorry, I encountered an error. Please try again."
+    if channel == "DEV":
+        # Dev → Qwen via Alibaba MaaS
+        if not QWEN_API_KEY:
+            last = messages[-1]["text"] if messages else ""
+            return f"[dev] Echo: {last[:100]}"
+        payload = {
+            "model": "qwen3.5-plus",
+            "messages": full_messages,
+            "temperature": 0.5,
+            "max_tokens": 1024,
+            "thinking": {"type": "off"},
+        }
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    f"{QWEN_BASE_URL}/chat/completions",
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {QWEN_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                raw = data["choices"][0]["message"]["content"]
+                return _strip_thinking(raw)
+        except Exception as e:
+            log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
+            return "Sorry, I encountered an error. Please try again."
+    else:
+        # Research → Grok-3 with x_search (handles growth + research tasks)
+        if not XAI_API_KEY:
+            last = messages[-1]["text"] if messages else ""
+            return f"[research] Echo: {last[:100]}"
+        payload = {
+            "model": "grok-3",
+            "messages": full_messages,
+            "temperature": 0.5,
+            "max_tokens": 1024,
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "x_search",
+                        "description": "Search the web for current information",
+                        "parameters": {"type": "object", "properties": {}, "required": []},
+                    },
+                }
+            ],
+        }
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    f"{XAI_BASE_URL}/chat/completions",
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {XAI_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                raw = data["choices"][0]["message"]["content"]
+                return raw.strip() if raw else ""
+        except Exception as e:
+            log_event(event="llm_call_failed", severity="high", channel=channel, error=str(e))
+            return "Sorry, I encountered an error. Please try again."
 
 
 # ── History ────────────────────────────────────────────────────────────────────
@@ -176,8 +412,8 @@ async def _save_history(chat_id: str, history: list[dict]) -> None:
     """Save conversation history. One row per day-key per bot_token."""
     async with AsyncSessionLocal() as session:
         today = datetime.now(timezone.utc).date().isoformat()
-        bot_token = settings.TELEGRAM_BOT_TOKEN  # single bot, use same token as key
-        history_json = json.dumps(history[-100:], ensure_ascii=False)  # keep last 100 msgs
+        bot_token = settings.TELEGRAM_BOT_TOKEN
+        history_json = json.dumps(history[-100:], ensure_ascii=False)
 
         from sqlalchemy.dialects.postgresql import insert as pg_insert
         stmt = pg_insert(TelegramConversation).values(
@@ -201,8 +437,7 @@ async def _save_history(chat_id: str, history: list[dict]) -> None:
 
 async def _send(text: str, chat_id: str = HOME_CHAT_ID) -> None:
     """Send a message to Telegram."""
-    # Escape Telegram MarkdownV2 special chars
-    escape_chars = re.compile(r"([_*\[\]\(\)~`>#\+\-\=|{}\.!\\])")
+    escape_chars = re.compile(r"([_*\[\]\(\)~`>#\+\-=|{}\.!\\])")
     escaped = escape_chars.sub(r"\\\1", text)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -219,37 +454,34 @@ async def _send(text: str, chat_id: str = HOME_CHAT_ID) -> None:
 
 async def _route_message(text: str) -> str:
     """
-    Parse @agent prefix and route to the correct agent.
-    Returns the LLM response text.
+    Route message to the correct agent or handle as CEO.
+    @dev       → Dev Agent (Qwen)
+    @research  → Research Agent (Grok-3 + x_search)
+    no @mention → Hermes CEO (decides)
     """
     # Match @agent at the start of the message
     match = re.match(r"^@(\w+)\s+(.+)$", text.strip(), re.DOTALL)
     if not match:
-        # No prefix → default to GROWTH
-        agent_key = "growth"
+        # No prefix → CEO decides
+        agent_key = None
         content = text.strip()
     else:
         agent_key = match.group(1).lower()
         content = match.group(2).strip()
 
-    if agent_key not in AGENT_MAP:
+    if agent_key and agent_key not in AGENT_MAP:
         available = ", ".join(AGENT_MAP.keys())
-        return f"Unknown agent: `{agent_key}`\. Available agents: {available}"
+        return f"Unknown agent: `{agent_key}`\. Available: {available}"
 
-    # DEVELOPER: delegate to SquadManager (persistent per-project qwen serve)
+    # DEV: delegate to SquadManager
     if agent_key == "dev":
         sq_mgr = SquadManager()
         result = sq_mgr.run(content)
-        history.append({"from": "user", "text": content,
-                        "timestamp": datetime.now(timezone.utc).isoformat()})
-        history.append({"from": "assistant", "text": result,
-                        "timestamp": datetime.now(timezone.utc).isoformat()})
-        await _save_history(HOME_CHAT_ID, history)
         return result
 
-    channel = AGENT_MAP[agent_key]
+    channel = AGENT_MAP[agent_key] if agent_key else "CEO"
 
-    # Load history for this chat
+    # Load history
     history = await _load_history(HOME_CHAT_ID)
 
     # Add current message
@@ -277,14 +509,16 @@ async def _route_message(text: str) -> str:
 
 @router.post("/test_webhook")
 async def test_webhook():
-    return {"ok": True, "message": "single\-bot router ready"}
+    return {"ok": True, "message": "Hermes CEO router ready"}
 
 
 @router.post("/{token}/webhook")
 async def handle_webhook(token: str, request: Request):
     """
-    Main webhook handler — all routing happens in DM with @mention syntax.
-    No channel setup needed.
+    Main webhook handler.
+    No @mention  → Hermes CEO decides
+    @dev         → Dev Agent (Qwen)
+    @research    → Research Agent (Grok-3 + x_search)
     """
     try:
         body = await request.json()
@@ -301,22 +535,17 @@ async def handle_webhook(token: str, request: Request):
     user = message.get("from", {})
     text = message.get("text", "")
 
-    # Only handle text messages in private DM (chat_type = "private")
     if not text:
         return {"ok": True}
 
     chat_type = chat.get("type", "")
     if chat_type != "private":
-        # Ignore group/channel messages — we're only handling DMs
         return {"ok": True}
 
     chat_id = str(chat.get("id", ""))
-    first_name = user.get("first_name", "there")
 
-    # Route via @agent prefix
     response = await _route_message(text)
 
-    # Send response back to the DM
     if response:
         await _send(response, chat_id)
 
@@ -324,12 +553,80 @@ async def handle_webhook(token: str, request: Request):
     return {"ok": True}
 
 
-# ── Daily digest (for cron job) ────────────────────────────────────────────────
+# ── CEO Status Report (for cron job) ──────────────────────────────────────────
+
+async def _build_ceo_status() -> str:
+    """
+    Build a 30-minute CEO status report from Linear.
+    Returns a concise summary of open tasks across all projects.
+    """
+    import os
+    api_key = os.environ.get("LINEAR_API_KEY", "")
+    if not api_key:
+        return "📋 *CEO Status*\n\nLinear not configured."
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        headers = {"Authorization": api_key, "Content-Type": "application/json"}
+
+        # Get open issues (In Progress, Ready, Review)
+        query = """
+        {
+          issues(filter: {
+            state: { type: { in: ["started", "unstarted", "triage"] } }
+          }, first: 20, orderBy: updatedAt) {
+            nodes {
+              identifier title priority state { name type }
+              assignee { name } team { key } url
+            }
+          }
+        }
+        """
+        try:
+            resp = await client.post(
+                "https://api.linear.app/graphql",
+                json={"query": query},
+                headers=headers,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            issues = data.get("data", {}).get("issues", {}).get("nodes", [])
+        except Exception:
+            issues = []
+
+    if not issues:
+        return "📋 *CEO Status*\n\nNo active tasks in Linear."
+
+    lines = ["📋 *CEO Status — 30min Review*", ""]
+
+    by_agent = defaultdict(list)
+    for issue in issues:
+        team = issue.get("team", {}).get("key", "?")
+        identifier = issue.get("identifier", "")
+        title = issue.get("title", "")[:60]
+        state = issue.get("state", {}).get("name", "?")
+        assignee = issue.get("assignee", {}).get("name", "unassigned")
+        url = issue.get("url", "")
+        lines.append(f"• [{identifier}] {title}")
+        lines.append(f"  {state} · {assignee} · {team}")
+        lines.append("")
+
+    lines.append("_CEO review complete_")
+    return "\n".join(lines)
+
+
+@router.get("/status")
+async def get_ceo_status():
+    """Manual trigger for CEO status report."""
+    status = await _build_ceo_status()
+    await _send(status)
+    return {"ok": True, "status": status}
+
+
+# ── Daily digest ───────────────────────────────────────────────────────────────
 
 async def _build_digest() -> str:
     """
-    Build a concise daily digest from the previous day's conversation history.
-    Runs at 06:00 Berlin (04:00 UTC).
+    Build a weekly CEO review digest.
     """
     async with AsyncSessionLocal() as session:
         yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date()
@@ -348,7 +645,6 @@ async def _build_digest() -> str:
     if not rows:
         return f"📋 *Daily Digest — {yesterday.isoformat()}*\n\nNo activity yesterday."
 
-    # Collect all messages
     all_messages = []
     for row in rows:
         try:
@@ -356,7 +652,6 @@ async def _build_digest() -> str:
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # Group by agent channel (look for @growth, @infra etc in user messages)
     agent_counts = defaultdict(int)
     total_user = 0
     for msg in all_messages:
@@ -367,18 +662,14 @@ async def _build_digest() -> str:
                 if f"@{agent}" in text.lower():
                     agent_counts[agent] += 1
                     break
-        else:
-            pass  # count total messages by agent later via history
 
-    # Build digest lines
     lines = [
         f"📋 *Daily Digest — {yesterday.isoformat()}*",
-        f"",
+        "",
         f"Total interactions: {total_user}",
-        f""
+        "",
     ]
 
-    # Per-agent summary
     if agent_counts:
         lines.append("*By Agent:*")
         for agent, count in sorted(agent_counts.items(), key=lambda x: -x[1]):
@@ -386,35 +677,13 @@ async def _build_digest() -> str:
             lines.append(f"  • {channel}: {count} message\(s\)")
         lines.append("")
 
-    # Action items: look for numbered lists or TODO-like content in assistant responses
-    lines.append("*Action Items:*")
-    action_count = 0
-    for msg in all_messages:
-        if msg.get("from") == "assistant":
-            text = msg.get("text", "")
-            # Look for numbered items, TODO items, or lines starting with -
-            for line in text.split("\n"):
-                stripped = line.strip()
-                if any(stripped.startswith(marker) for marker in ["1.", "2.", "3.", "- [ ]", "TODO", "[ ]", "Action:"]):
-                    lines.append(f"  • {stripped[:100]}")
-                    action_count += 1
-                    if action_count >= 10:
-                        break
-        if action_count >= 10:
-            break
-
-    if action_count == 0:
-        lines.append("  • No explicit action items found — check agent responses above")
-
-    lines.append("")
-    lines.append("_Generated automatically by Hermes_")
-
+    lines.append("_Generated automatically by Hermes CEO_")
     return "\n".join(lines)
 
 
 @router.get("/digest")
 async def get_digest():
-    """Manual trigger for daily digest — also callable by cron job."""
+    """Manual trigger for daily digest."""
     digest = await _build_digest()
     await _send(digest)
     return {"ok": True, "digest": digest}
