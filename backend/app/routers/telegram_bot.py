@@ -542,57 +542,41 @@ async def handle_webhook(token: str, request: Request):
 
 async def _build_ceo_status() -> str:
     """
-    Build a 30-minute CEO status report from Linear.
-    Returns a concise summary of open tasks across all projects.
+    Build a 30-minute CEO status report from Hermes Kanban.
+    Returns a concise summary of open tasks across all agents.
     """
-    import os
-    api_key = os.environ.get("LINEAR_API_KEY", "")
-    if not api_key:
-        return "📋 *CEO Status*\n\nLinear not configured."
+    import subprocess
+    result = subprocess.run(
+        ["hermes", "kanban", "list", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        return "📋 *CEO Status*\n\nHermes Kanban not available."
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        headers = {"Authorization": api_key, "Content-Type": "application/json"}
+    import json
+    try:
+        cards = json.loads(result.stdout)
+    except Exception:
+        return "📋 *CEO Status*\n\nFailed to read kanban board."
 
-        # Get open issues (In Progress, Ready, Review)
-        query = """
-        {
-          issues(filter: {
-            state: { type: { in: ["started", "unstarted", "triage"] } }
-          }, first: 20, orderBy: updatedAt) {
-            nodes {
-              identifier title priority state { name type }
-              assignee { name } team { key } url
-            }
-          }
-        }
-        """
-        try:
-            resp = await client.post(
-                "https://api.linear.app/graphql",
-                json={"query": query},
-                headers=headers,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            issues = data.get("data", {}).get("issues", {}).get("nodes", [])
-        except Exception:
-            issues = []
-
-    if not issues:
-        return "📋 *CEO Status*\n\nNo active tasks in Linear."
-
-    lines = ["📋 *CEO Status — 30min Review*", ""]
+    if not cards:
+        return "📋 *CEO Status*\n\nNo tasks in Kanban."
 
     by_agent = defaultdict(list)
-    for issue in issues:
-        team = issue.get("team", {}).get("key", "?")
-        identifier = issue.get("identifier", "")
-        title = issue.get("title", "")[:60]
-        state = issue.get("state", {}).get("name", "?")
-        assignee = issue.get("assignee", {}).get("name", "unassigned")
-        url = issue.get("url", "")
-        lines.append(f"• [{identifier}] {title}")
-        lines.append(f"  {state} · {assignee} · {team}")
+    for card in cards:
+        assignee = card.get("assignee", "unassigned")
+        by_agent[assignee].append(card)
+
+    lines = ["📋 *CEO Status — Kanban Board*", ""]
+    for agent, agent_cards in by_agent.items():
+        lines.append(f"**{agent.upper()}** ({len(agent_cards)} tasks)")
+        for card in agent_cards:
+            status_icon = "●" if card.get("status") == "running" else "◻"
+            title = card.get("title", "")[:50]
+            card_id = card.get("id", "")
+            lines.append(f"  {status_icon} [{card_id}] {title}")
         lines.append("")
 
     lines.append("_CEO review complete_")
