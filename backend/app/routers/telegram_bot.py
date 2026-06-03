@@ -333,20 +333,11 @@ async def _call_llm(channel: str, messages: list[dict]) -> str:
             last = messages[-1]["text"] if messages else ""
             return f"[research] Echo: {last[:100]}"
         payload = {
-            "model": "grok-3",
+            "model": "grok-4",
             "messages": full_messages,
             "temperature": 0.5,
             "max_tokens": 1024,
-            "tools": [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "x_search",
-                        "description": "Search the web for current information",
-                        "parameters": {"type": "object", "properties": {}, "required": []},
-                    },
-                }
-            ],
+            "search": {"enabled": True},
         }
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
