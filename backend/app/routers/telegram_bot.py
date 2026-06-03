@@ -23,10 +23,6 @@ from collections import defaultdict
 from fastapi import APIRouter, Request, HTTPException
 from sqlalchemy import select, func
 
-import sys
-sys.path.insert(0, "/root/.hermes/agents")
-from _shared.squad import SquadManager
-
 from app.database import AsyncSessionLocal
 from app.models import TelegramConversation
 from app.services.structured_logger import log_event
@@ -449,11 +445,22 @@ async def _route_message(text: str) -> str:
         available = ", ".join(AGENT_MAP.keys())
         return f"Unknown agent: `{agent_key}`\. Available: {available}"
 
-    # DEV: delegate to SquadManager
+    # DEV: delegate to Qwen via _call_llm
     if agent_key == "dev":
-        sq_mgr = SquadManager()
-        result = sq_mgr.run(content)
-        return result
+        history = await _load_history(HOME_CHAT_ID)
+        history.append({
+            "from": "user",
+            "text": content,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        response = await _call_llm("DEV", history)
+        history.append({
+            "from": "assistant",
+            "text": response,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        await _save_history(HOME_CHAT_ID, history)
+        return response
 
     channel = AGENT_MAP[agent_key] if agent_key else "CEO"
 
